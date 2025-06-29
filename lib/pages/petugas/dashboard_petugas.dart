@@ -3,6 +3,11 @@ import 'package:login_signup/widgets/header.dart'; // Import CustomHeader
 import 'package:login_signup/widgets/menu.dart'; // Import CustomBottomNavBar
 import 'package:login_signup/screens/signin_screen.dart'; // Pastikan import ini benar
 
+// Impor halaman-halaman yang akan dinavigasikan
+import 'package:login_signup/pages/petugas/eresep.dart'; // <<< IMPOR BARU
+import 'package:login_signup/pages/petugas/obat.dart'; // <<< IMPOR BARU
+import 'package:login_signup/pages/petugas/akun.dart'; // <<< IMPOR BARU
+
 class DashboardPetugas extends StatefulWidget {
   const DashboardPetugas({super.key});
 
@@ -82,12 +87,15 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   void initState() {
     super.initState();
     _processLocalData();
-    _scrollController.addListener(_scrollListener);
+    // PERBAIKAN UNTUK ERROR ScrollController
+    _scrollController.addListener(() {
+      _scrollListener();
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_scrollListener);
+    _scrollController.removeListener(_scrollListener); // Gunakan juga di sini
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -195,14 +203,17 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
       backgroundColor: accentColor,
       appBar: CustomHeader(
         primaryColor: primaryColor,
+        // LOGIKA onNotificationPressed: akan menampilkan pop-up
         onNotificationPressed: () {
-          _showSimpleModal('Notifikasi', 'Tidak ada notifikasi baru.');
+          _showSimpleModal(
+              'Notifikasi', 'Anda memiliki beberapa notifikasi baru.');
         },
         searchController: _searchController,
         onSearchChanged: (text) {
           // Handle search text changes
           print('Search text: $text');
         },
+        searchHintText: 'Cari...',
       ),
       body: CustomScrollView(
         controller: _scrollController,
@@ -322,8 +333,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                         title: 'GOOD',
                         subtitle: 'Status Inventaris',
                         detailText: 'Lihat Detail Laporan',
+                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal('Status Inventaris',
-                            'Total obat aman: ${_medicineStockStatus["aman"]["count"]}'),
+                            'Ini adalah detail laporan status inventaris.'),
                         isSpecialCard: true,
                       ),
 
@@ -335,8 +347,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                         title: _eresepMenungguPembayaran.toString(),
                         subtitle: 'E-Resep Masuk',
                         detailText: 'Lihat Detail Laporan',
+                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal('E-Resep Masuk',
-                            'Total e-resep baru: $_eresepMenungguPembayaran'),
+                            'Ini adalah detail e-resep yang masuk.'),
                       ),
 
                       // Low Stock Medicine
@@ -348,8 +361,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                             .toString(),
                         subtitle: 'Obat Hampir Habis',
                         detailText: 'Lihat Persediaan',
+                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal('Obat Hampir Habis',
-                            'Total obat hampir habis: ${_medicineStockStatus["hampirHabis"]["count"]}'),
+                            'Ini adalah daftar obat yang hampir habis.'),
                       ),
 
                       // Out of Stock Medicine
@@ -361,8 +375,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                             _medicineStockStatus["habis"]["count"].toString(),
                         subtitle: 'Obat Habis',
                         detailText: 'Stok Sekarang',
-                        onClick: () => _showSimpleModal('Obat Habis',
-                            'Total obat habis: ${_medicineStockStatus["habis"]["count"]}'),
+                        // UBAH LOGIKA onClick DI SINI untuk pop-up
+                        onClick: () => _showSimpleModal(
+                            'Obat Habis', 'Ini adalah daftar obat yang habis.'),
                       ),
                     ],
                   ),
@@ -385,6 +400,7 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                       ),
                       TextButton(
                         onPressed: () {
+                          // Ini tetap modal sederhana karena belum ada halaman spesifik "Lihat Semua Layanan Medis"
                           _showSimpleModal('Layanan Medis',
                               'Fitur "Lihat Semua" untuk layanan medis.');
                         },
@@ -410,6 +426,8 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                     spacing: 10.0,
                     runSpacing: 10.0,
                     children: [
+                      // Chip-chip ini bisa dinavigasikan ke halaman ObatPage jika diklik
+                      // Untuk demo ini, tidak ada aksi onTap di sini, hanya visual.
                       _buildMedicalServiceChip(
                           Icons.local_hospital, 'Obat Paru-paru'),
                       _buildMedicalServiceChip(Icons.water_drop, 'Obat Ginjal'),
@@ -444,6 +462,7 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     children: [
+                      // Untuk rekomendasi ini, tidak ada navigasi yang diminta, jadi hanya visual
                       _buildMedicineCard(
                         'assets/images/medicine_example_1.png',
                         'Contoh obat',
@@ -475,8 +494,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                       _buildSummarySection(
                         title: "Stock",
                         linkText: "Lihat Stok",
-                        linkAction: () => _showSimpleModal(
-                            "Stock", "Navigasi ke halaman stok obat."),
+                        // UBAH LOGIKA linkAction DI SINI untuk pop-up
+                        linkAction: () => _showSimpleModal('Ringkasan Stok',
+                            'Ini adalah ringkasan stok obat.'),
                         children: [
                           _buildSummaryItem(
                             _mockObatList.length.toString(),
@@ -496,8 +516,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                       _buildSummarySection(
                         title: "e-Eresep",
                         linkText: "Lihat e-Resep",
-                        linkAction: () => _showSimpleModal(
-                            "e-Resep", "Navigasi ke halaman e-resep."),
+                        // UBAH LOGIKA linkAction DI SINI untuk pop-up
+                        linkAction: () => _showSimpleModal('Ringkasan E-Resep',
+                            'Ini adalah ringkasan e-resep.'),
                         children: [
                           _buildSummaryItem(
                             _eresepMenungguPembayaran.toString(),
@@ -529,19 +550,38 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
           setState(() {
             _selectedIndex = index;
           });
+          // --- LOGIKA NAVIGASI DARI BOTTOM NAV BAR (TIDAK BERUBAH) ---
           if (index == 0) {
+            // Ini tetap Dashboard, jadi cukup scroll ke atas
             _scrollController.animateTo(0,
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOut);
           } else if (index == 1) {
-            _showSimpleModal('E-Resep', 'Anda mengklik menu E-Resep.');
+            // Navigasi ke Halaman E-Resep (mengganti halaman saat ini)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const EresepPage()),
+            );
           } else if (index == 2) {
-            _showSimpleModal('Obat', 'Anda mengklik menu Obat.');
+            // Navigasi ke Halaman Obat (mengganti halaman saat ini)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ObatPage()),
+            );
           } else if (index == 3) {
+            // Navigasi ke Halaman Akun (mengganti halaman saat ini)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AkunPage()),
+            );
+          } else if (index == 4) {
+            // Asumsi ada 5 item di menu
+            // Navigasi untuk Sign Out / Kembali ke Sign In Screen (menghapus riwayat)
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const SignInScreen()),
-              (Route<dynamic> route) => false,
+              (Route<dynamic> route) =>
+                  false, // Menghapus semua route sebelumnya di stack
             );
           }
         },

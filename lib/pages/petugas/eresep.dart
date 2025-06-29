@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:login_signup/widgets/header.dart'; // Pastikan CustomHeader Anda ada
 import 'package:login_signup/widgets/menu.dart'; // Pastikan CustomBottomNavBar Anda ada
 import 'package:login_signup/screens/signin_screen.dart'; // Untuk navigasi Signin
-import 'package:url_launcher/url_launcher.dart'; // Pastikan url_launcher sudah di pubspec.yaml
+
+// Import halaman-halaman utama lainnya untuk navigasi BottomNavBar
+import 'package:login_signup/pages/petugas/dashboard_petugas.dart'; // Penting untuk navigasi antar menu
+import 'package:login_signup/pages/petugas/obat.dart'; // Penting untuk navigasi antar menu
+import 'package:login_signup/pages/petugas/akun.dart'; // Penting untuk navigasi antar menu
+
+// URL Launcher (Jika Anda ingin mencoba meluncurkan URL atau file, tapi untuk assets PDF lebih baik pakai PDF viewer library)
+// import 'package:url_launcher/url_launcher.dart'; // Uncomment jika sudah di pubspec.yaml dan ingin pakai ini
 
 class EresepPage extends StatefulWidget {
   const EresepPage({super.key});
@@ -12,7 +19,7 @@ class EresepPage extends StatefulWidget {
 }
 
 class _EresepPageState extends State<EresepPage> {
-  // --- Colors ---
+  // --- Colors (Salin dari DashboardPetugas agar konsisten) ---
   final Color primaryColor = const Color(0xFF2A4D69);
   final Color secondaryColor = const Color(0xFF6B8FB4);
   final Color accentColor =
@@ -135,7 +142,6 @@ class _EresepPageState extends State<EresepPage> {
 
   // --- Filter and Sort State ---
   String _statusFilter = "Semua"; // Currently active filter
-  String _sortBy = ""; // Sorting criteria
   String _searchText = ""; // Search text
   bool _showAll = false; // To show all items if there are more than 12
   // Map<String, dynamic>? _selectedResep; // Not currently used, can be removed if not needed for future modals
@@ -166,7 +172,7 @@ class _EresepPageState extends State<EresepPage> {
     "Selesai": "Selesai",
   };
 
-  // Priority map for sorting
+  // Priority map for sorting (masih dipertahankan, tapi tidak digunakan jika dropdown urutkan dihapus)
   final Map<String, int> _statusPriority = {
     "Sudah Bayar": 1, // Highest priority
     "Diproses": 2,
@@ -174,8 +180,13 @@ class _EresepPageState extends State<EresepPage> {
     "Selesai": 4, // Lowest priority
   };
 
+  // --- UI State Variables untuk Header dan Menu ---
+  int _selectedIndex =
+      1; // Default selected index untuk EresepPage adalah 1 (asumsi: 0-Dashboard, 1-Eresep)
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTopButton = false;
+  final TextEditingController _headerSearchController =
+      TextEditingController(); // Controller untuk search bar di header
 
   @override
   void initState() {
@@ -190,6 +201,7 @@ class _EresepPageState extends State<EresepPage> {
   void dispose() {
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
+    _headerSearchController.dispose(); // Dispose controller header
     super.dispose();
   }
 
@@ -240,9 +252,11 @@ class _EresepPageState extends State<EresepPage> {
       data = data.where((resep) => resep['status'] == targetStatus).toList();
     }
 
-    // Filter by search text
-    if (_searchText.isNotEmpty) {
-      final lowerSearch = _searchText.toLowerCase();
+    // Filter by search text (gunakan _headerSearchController.text juga)
+    if (_searchText.isNotEmpty || _headerSearchController.text.isNotEmpty) {
+      final lowerSearch =
+          (_searchText.isNotEmpty ? _searchText : _headerSearchController.text)
+              .toLowerCase();
       data = data.where((resep) {
         return (resep['id_pendaftaran']?.toLowerCase().contains(lowerSearch) ??
                 false) ||
@@ -253,25 +267,17 @@ class _EresepPageState extends State<EresepPage> {
       }).toList();
     }
 
-    // Sorting
+    // Sorting (Bagian ini tidak lagi relevan jika dropdown dihapus, tapi jika Anda ingin tetap
+    // ada sorting default atau berdasarkan status, bisa dipertahankan atau diubah)
     data.sort((a, b) {
       final aPriority = _statusPriority[a['status']] ?? 999;
       final bPriority = _statusPriority[b['status']] ?? 999;
       if (aPriority != bPriority) return aPriority - bPriority;
 
-      if (_sortBy == "nama") {
-        return (a['nama_pasien'] as String)
-            .compareTo(b['nama_pasien'] as String);
-      }
-      if (_sortBy == "dokter") {
-        return (a['nama_dokter'] as String)
-            .compareTo(b['nama_dokter'] as String);
-      }
-      if (_sortBy == "id") {
-        return (a['id_pendaftaran'] as String)
-            .compareTo(b['id_pendaftaran'] as String);
-      }
-      return 0;
+      // Jika prioritas status sama, bisa ditambahkan sorting sekunder
+      // Contoh: sorting berdasarkan ID pendaftaran (baru ke lama atau sebaliknya)
+      // return (b['id_pendaftaran'] as String).compareTo(a['id_pendaftaran'] as String);
+      return 0; // Tanpa sorting sekunder eksplisit jika dropdown dihapus
     });
 
     return data;
@@ -387,18 +393,24 @@ class _EresepPageState extends State<EresepPage> {
 
     return Scaffold(
       backgroundColor: accentColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: const Text(
-          'E-Resep',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+      appBar: CustomHeader(
+        primaryColor: primaryColor,
+        onNotificationPressed: () {
+          // --- Mengubah navigasi menjadi pop-up ---
+          _showSimpleModal(
+              'Notifikasi', 'Anda memiliki beberapa notifikasi baru.');
+        },
+        searchController:
+            _headerSearchController, // Menggunakan controller baru untuk header
+        onSearchChanged: (text) {
+          // Mengupdate filter pencarian utama ketika teks di header berubah
+          setState(() {
+            _searchText = text;
+            _filterAndSortResep();
+          });
+        },
+        searchHintText:
+            'Cari E-Resep di sini...', // Hint text khusus untuk EresepPage
       ),
       body: CustomScrollView(
         controller: _scrollController,
@@ -427,15 +439,8 @@ class _EresepPageState extends State<EresepPage> {
 
                       // Categories / Status Filter Buttons
                       _buildCategoriesSection(),
+                      // --- PERUBAHAN DI SINI: Mengurangi SizedBox dari 24 menjadi 16 ---
                       const SizedBox(height: 16),
-
-                      // Sort By Dropdown
-                      _buildSortByDropdown(),
-                      const SizedBox(height: 16),
-
-                      // Search Input
-                      _buildSearchInput(),
-                      const SizedBox(height: 24),
 
                       // List Resep Cards
                       _isLoading
@@ -503,6 +508,44 @@ class _EresepPageState extends State<EresepPage> {
           ),
         ],
       ),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          // Logika navigasi yang sama seperti di DashboardPetugas dan ObatPage
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DashboardPetugas()),
+            );
+          } else if (index == 1) {
+            // Sudah di halaman Eresep, jadi tidak perlu navigasi ulang
+            print("Sudah di halaman E-Resep.");
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ObatPage()),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AkunPage()),
+            );
+          } else if (index == 4) {
+            // Asumsi ada 5 item di menu
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const SignInScreen()),
+              (Route<dynamic> route) => false,
+            );
+          }
+        },
+        selectedItemColor: primaryColor,
+        unselectedItemColor: Colors.grey[600]!,
+        primaryColor: primaryColor,
+      ),
       floatingActionButton: _showScrollToTopButton
           ? FloatingActionButton(
               onPressed: () {
@@ -516,8 +559,6 @@ class _EresepPageState extends State<EresepPage> {
               child: const Icon(Icons.arrow_upward, color: Colors.white),
             )
           : null,
-      // Hapus BottomNavigationBar dari sini karena sudah dikelola di main CustomBottomNavBar
-      // bottomNavigationBar: CustomBottomNavBar( ... )
     );
   }
 
@@ -527,7 +568,7 @@ class _EresepPageState extends State<EresepPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Categories',
+          'Kategori', // Tetap "Kategori" sesuai kode Anda sebelumnya
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -535,7 +576,7 @@ class _EresepPageState extends State<EresepPage> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 80, // Fixed height for horizontal ListView
+          height: 65, // Tinggi sedikit dikurangi karena tidak ada label teks
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: _categoryOptions.length,
@@ -574,7 +615,8 @@ class _EresepPageState extends State<EresepPage> {
               }
 
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10.0), // Padding horizontal sedikit lebih besar
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
@@ -584,6 +626,8 @@ class _EresepPageState extends State<EresepPage> {
                   },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.center, // Pusatkan secara horizontal
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -611,16 +655,16 @@ class _EresepPageState extends State<EresepPage> {
                           size: 30,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isSelected ? primaryColor : Colors.black87,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
+                      // SizedBox(height: 4), // Dihapus karena tidak ada teks label
+                      // Text(
+                      //   status,
+                      //   textAlign: TextAlign.center, // Dihapus karena tidak ada teks label
+                      //   style: TextStyle(
+                      //     fontSize: 12,
+                      //     color: isSelected ? primaryColor : Colors.black87,
+                      //     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
@@ -633,76 +677,45 @@ class _EresepPageState extends State<EresepPage> {
   }
 
   /// Builds the sort by dropdown.
-  Widget _buildSortByDropdown() {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: 'Urutkan',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey[400]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey[400]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      value: _sortBy.isEmpty ? null : _sortBy,
-      hint: const Text("Urutkan"),
-      items: const [
-        DropdownMenuItem(value: "nama", child: Text("Nama Pasien (A-Z)")),
-        DropdownMenuItem(value: "dokter", child: Text("Nama Dokter (A-Z)")),
-        DropdownMenuItem(value: "id", child: Text("ID Pendaftaran (A-Z)")),
-      ],
-      onChanged: (value) {
-        setState(() {
-          _sortBy = value ?? "";
-          _filterAndSortResep(); // Re-call when sorting changes
-        });
-      },
-    );
-  }
+  // Widget _buildSortByDropdown() { // Seluruh fungsi ini dihapus
+  //   return DropdownButtonFormField<String>(
+  //     decoration: InputDecoration(
+  //       labelText: 'Urutkan',
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(8),
+  //         borderSide: BorderSide(color: Colors.grey[400]!),
+  //       ),
+  //       enabledBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(8),
+  //         borderSide: BorderSide(color: Colors.grey[400]!),
+  //       ),
+  //       focusedBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(8),
+  //         borderSide: BorderSide(color: primaryColor, width: 2),
+  //       ),
+  //       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //     ),
+  //     value: _sortBy.isEmpty ? null : _sortBy,
+  //     hint: const Text("Urutkan"),
+  //     items: const [
+  //       DropdownMenuItem(value: "nama", child: Text("Nama Pasien (A-Z)")),
+  //       DropdownMenuItem(value: "dokter", child: Text("Nama Dokter (A-Z)")),
+  //       DropdownMenuItem(value: "id", child: Text("ID Pendaftaran (A-Z)")),
+  //     ],
+  //     onChanged: (value) {
+  //       setState(() {
+  //         _sortBy = value ?? "";
+  //         _filterAndSortResep(); // Re-call when sorting changes
+  //       });
+  //     },
+  //   );
+  // }
 
   /// Builds the search input field.
   Widget _buildSearchInput() {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Ketik ID Pendaftaran, Pasien, Dokter',
-        hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
-        filled: true,
-        fillColor: const Color(0xFFE3EBF3), // Input background color
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        suffixIcon: IconButton(
-          icon: Icon(Icons.search, color: primaryColor),
-          onPressed: () {
-            FocusScope.of(context).unfocus(); // Hide keyboard
-          },
-        ),
-      ),
-      onChanged: (value) {
-        setState(() {
-          _searchText = value;
-          _filterAndSortResep(); // Re-call when text changes
-        });
-      },
-    );
+    // Search input ini dihapus karena sudah ada search bar di CustomHeader.
+    // Jika Anda ingin dua search bar, Anda bisa tambahkan kembali widget ini.
+    return const SizedBox.shrink(); // Mengembalikan widget kosong
   }
 
   /// Builds a single prescription card.
@@ -714,23 +727,32 @@ class _EresepPageState extends State<EresepPage> {
     Color actionColor;
     VoidCallback onActionTap;
 
+    // Perubahan logika untuk tombol aksi
     if (resep['status'] == "Diproses") {
       statusColor = primaryColor; // Color for "Antrian E-Resep"
-      actionText = "Terima"; // As per image
+      actionText = "Terima"; // Tombol "Terima" untuk status "Diproses"
       actionColor = Colors.green;
-      onActionTap = () => _updateResepStatus(
-          resep['id_pendaftaran'], "Selesai"); // Assume "Terima" means complete
+      onActionTap = () {
+        _showSimpleModal("Resep Diterima",
+            "E-Resep ${resep['id_pendaftaran']} telah diterima (Diproses).");
+        // Di sini Anda bisa menambahkan logika untuk benar-benar mengubah status jika diperlukan
+        // _updateResepStatus(resep['id_pendaftaran'], "Selesai"); // Contoh: Jika Terima berarti Selesai
+      };
     } else if (resep['status'] == "Sudah Bayar") {
       statusColor = Colors.blue; // Color for "Menunggu Panggilan"
-      actionText = "Terima"; // As per image
-      actionColor = Colors.green;
-      onActionTap = () => _updateResepStatus(resep['id_pendaftaran'],
-          "Diproses"); // Assume "Terima" means processing/call
+      actionText = "Panggil"; // Tombol "Panggil" untuk status "Sudah Bayar"
+      actionColor = Colors.blueAccent; // Warna untuk tombol Panggil
+      onActionTap = () {
+        _showSimpleModal("Panggilan Pasien",
+            "Pasien ${resep['nama_pasien']} dengan ID ${resep['id_pendaftaran']} akan dipanggil.");
+        // Di sini Anda bisa menambahkan logika untuk mengubah status menjadi "Diproses" setelah dipanggil
+        // _updateResepStatus(resep['id_pendaftaran'], "Diproses");
+      };
     } else {
       statusColor = Colors
           .orange; // Default for other statuses (e.g., Menunggu Pembayaran)
-      actionText = "Terima"; // Default
-      actionColor = Colors.green;
+      actionText = "Lihat"; // Tombol default jika tidak ada aksi spesifik
+      actionColor = Colors.grey;
       onActionTap = () {
         _showSimpleModal("Aksi Tidak Diizinkan",
             "Resep ini masih berstatus '${resep['status']}'.");
@@ -867,7 +889,7 @@ class _EresepPageState extends State<EresepPage> {
                     children: [
                       const TextSpan(
                         text:
-                            '"Terima"', // Should be "Panggil" or "Selesai" depending on status
+                            '"Panggil"', // Perbaikan teks tip agar sesuai dengan tombol baru
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       TextSpan(
@@ -896,20 +918,16 @@ class _EresepPageState extends State<EresepPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: ElevatedButton.icon(
-          onPressed: () async {
-            // Path relative to assets folder
-            const String pdfAssetPath = 'assets/pdf/petunjuk.pdf';
-            final Uri url =
-                Uri.file(pdfAssetPath); // Use Uri.file for local assets
-
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url);
-            } else {
-              _showSimpleModal(
-                "Kesalahan",
-                "Tidak dapat membuka file PDF. Pastikan ada aplikasi pembaca PDF di perangkat Anda dan path file sudah benar.",
-              );
-            }
+          onPressed: () {
+            // Placeholder: Menampilkan modal daripada mencoba membuka PDF
+            // karena url_launcher tidak mendukung PDF dari assets secara langsung.
+            _showSimpleModal(
+              "Fitur Petunjuk",
+              "Fitur ini akan menampilkan petunjuk penggunaan E-Resep. "
+                  "Implementasi pembaca PDF dari assets memerlukan library khusus "
+                  "(misal: `flutter_pdfview`) atau penyimpanan file ke direktori "
+                  "sementara untuk dibuka aplikasi eksternal.",
+            );
           },
           icon: Icon(Icons.description,
               color: primaryColor), // Using primaryColor

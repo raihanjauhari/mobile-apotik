@@ -17,14 +17,15 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize =>
-      const Size.fromHeight(180.0); // Tinggi total AppBar yang FIXED
+  Size get preferredSize => const Size.fromHeight(
+      130.0); // Tinggi total AppBar yang FIXED, DIKECILKAN
 
   @override
   Widget build(BuildContext context) {
     final double topPadding = MediaQuery.of(context).padding.top;
 
-    return Container(
+    return SizedBox(
+      // Gunakan SizedBox alih-alih Container langsung
       height: preferredSize.height,
       child: Stack(
         children: [
@@ -49,7 +50,8 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
 
           // Konten Header: Ikon Notifikasi (kanan atas)
           Positioned(
-            top: topPadding + 10,
+            top: topPadding +
+                5, // Sesuaikan posisi vertikal ikon notifikasi (DIKECILKAN)
             right: 16,
             child: IconButton(
               icon: const Icon(Icons.notifications,
@@ -59,7 +61,8 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           // Konten Header: Search Bar (tengah bawah)
           Positioned(
-            top: topPadding + 80, // Sesuaikan posisi vertikal search bar
+            top: topPadding +
+                60, // Sesuaikan posisi vertikal search bar (DIKECILKAN)
             left: 0,
             right: 0,
             child: Padding(
@@ -85,7 +88,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                     hintText: searchHintText,
                     hintStyle: TextStyle(color: Colors.grey[500]),
                     prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                    suffixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                    // suffixIcon: Icon(Icons.search, color: Colors.grey[600]), // Menghapus suffixIcon ganda
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 15.0, horizontal: 10.0),
