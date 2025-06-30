@@ -38,6 +38,7 @@ dependencies:
   flutter_svg: ^2.0.11+1
   http: ^1.2.1
   url_launcher: ^6.3.0
+  syncfusion_flutter_pdfviewer: ^26.1.41
 
 dev_dependencies:
   flutter_test:

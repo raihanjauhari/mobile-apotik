@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:login_signup/widgets/header.dart'; // Import CustomHeader
 import 'package:login_signup/widgets/menu.dart'; // Import CustomBottomNavBar
 import 'package:login_signup/screens/signin_screen.dart'; // Pastikan import ini benar
+import 'package:intl/intl.dart'; // Import for currency formatting
 
 // Impor halaman-halaman yang akan dinavigasikan
 import 'package:login_signup/pages/petugas/eresep.dart'; // <<< IMPOR BARU
@@ -20,6 +21,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   final Color primaryColor = const Color(0xFF2A4D69);
   final Color secondaryColor = const Color(0xFF6B8FB4);
   final Color accentColor = const Color(0xFFF0F4F8);
+  final Color successColor = const Color(0xFF4CAF50); // Green for GOOD status
+  final Color warningColor = const Color(0xFFFFC107); // Amber for warning
+  final Color dangerColor = const Color(0xFFF44336); // Red for danger/empty
 
   // --- Mock Data ---
   final List<Map<String, dynamic>> _mockObatList = [
@@ -87,7 +91,6 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   void initState() {
     super.initState();
     _processLocalData();
-    // PERBAIKAN UNTUK ERROR ScrollController
     _scrollController.addListener(() {
       _scrollListener();
     });
@@ -95,7 +98,7 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_scrollListener); // Gunakan juga di sini
+    _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -166,7 +169,8 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
         "hampirHabis": {"label": "Hampir Habis", "count": hampirHabisCount},
         "habis": {"label": "Habis", "count": habisCount},
       };
-      _totalEresep = totalEresepCount;
+      _totalEresep =
+          eresepBaruCount; // Mengambil hanya e-resep baru sesuai gambar
       _eresepMenungguPembayaran = eresepBaruCount;
       _pembayaranSelesai = pembayaranSelesaiCount;
       _totalPelanggan = totalPelangganCount;
@@ -203,14 +207,12 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
       backgroundColor: accentColor,
       appBar: CustomHeader(
         primaryColor: primaryColor,
-        // LOGIKA onNotificationPressed: akan menampilkan pop-up
         onNotificationPressed: () {
           _showSimpleModal(
               'Notifikasi', 'Anda memiliki beberapa notifikasi baru.');
         },
         searchController: _searchController,
         onSearchChanged: (text) {
-          // Handle search text changes
           print('Search text: $text');
         },
         searchHintText: 'Cari...',
@@ -312,7 +314,7 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 // Info Cards Grid
                 Padding(
@@ -323,59 +325,56 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16.0,
                     mainAxisSpacing: 16.0,
-                    childAspectRatio: 1.2,
+                    childAspectRatio:
+                        0.95, // Menyesuaikan rasio untuk membuat kartu sedikit lebih tinggi lagi
                     children: [
                       // 'GOOD' Status Card
                       _buildInfoCard(
                         cardIndex: 0,
-                        icon: Icons.shield,
-                        iconColor: Colors.green,
+                        icon: Icons.check_circle_rounded, // Variasi ikon
+                        iconColor: successColor,
                         title: 'GOOD',
                         subtitle: 'Status Inventaris',
                         detailText: 'Lihat Detail Laporan',
-                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal('Status Inventaris',
-                            'Ini adalah detail laporan status inventaris.'),
+                            'Ini adalah detail laporan status inventaris. Semua stok obat dalam kondisi baik.'),
                         isSpecialCard: true,
                       ),
 
                       // Incoming E-Prescriptions
                       _buildInfoCard(
                         cardIndex: 1,
-                        icon: Icons.inbox,
-                        iconColor: Colors.amber[700]!,
+                        icon: Icons.assignment, // Ikon baru: bill/invoice
+                        iconColor: warningColor,
                         title: _eresepMenungguPembayaran.toString(),
                         subtitle: 'E-Resep Masuk',
                         detailText: 'Lihat Detail Laporan',
-                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal('E-Resep Masuk',
-                            'Ini adalah detail e-resep yang masuk.'),
+                            'Ini adalah detail e-resep yang masuk dan sedang menunggu pembayaran.'),
                       ),
 
                       // Low Stock Medicine
                       _buildInfoCard(
                         cardIndex: 2,
-                        icon: Icons.medical_services,
+                        icon: Icons.folder, // Ikon baru: folder/box
                         iconColor: Colors.blue,
                         title: (_medicineStockStatus["hampirHabis"]["count"])
                             .toString(),
                         subtitle: 'Obat Hampir Habis',
                         detailText: 'Lihat Persediaan',
-                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal('Obat Hampir Habis',
-                            'Ini adalah daftar obat yang hampir habis.'),
+                            'Ini adalah daftar obat yang stoknya hampir habis dan perlu segera diisi ulang.'),
                       ),
 
                       // Out of Stock Medicine
                       _buildInfoCard(
                         cardIndex: 3,
-                        icon: Icons.warning,
-                        iconColor: Colors.red,
+                        icon: Icons.error, // Ikon baru: error/exclamation
+                        iconColor: dangerColor,
                         title:
                             _medicineStockStatus["habis"]["count"].toString(),
                         subtitle: 'Obat Habis',
                         detailText: 'Stok Sekarang',
-                        // UBAH LOGIKA onClick DI SINI untuk pop-up
                         onClick: () => _showSimpleModal(
                             'Obat Habis', 'Ini adalah daftar obat yang habis.'),
                       ),
@@ -383,9 +382,17 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                // Spacing after Info Cards Grid
+                const SizedBox(height: 32), // Jarak lebih besar
+                Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Colors.grey[300],
+                    indent: 16,
+                    endIndent: 16), // Pemisah visual
+                const SizedBox(height: 32), // Jarak setelah divider
 
-                // Online Medicine Orders Section
+                // Online Medicine Orders Section Header
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Row(
@@ -400,7 +407,6 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                       ),
                       TextButton(
                         onPressed: () {
-                          // Ini tetap modal sederhana karena belum ada halaman spesifik "Lihat Semua Layanan Medis"
                           _showSimpleModal('Layanan Medis',
                               'Fitur "Lihat Semua" untuk layanan medis.');
                         },
@@ -426,8 +432,6 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                     spacing: 10.0,
                     runSpacing: 10.0,
                     children: [
-                      // Chip-chip ini bisa dinavigasikan ke halaman ObatPage jika diklik
-                      // Untuk demo ini, tidak ada aksi onTap di sini, hanya visual.
                       _buildMedicalServiceChip(
                           Icons.local_hospital, 'Obat Paru-paru'),
                       _buildMedicalServiceChip(Icons.water_drop, 'Obat Ginjal'),
@@ -442,9 +446,17 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                // Spacing after Online Medicine Orders Section
+                const SizedBox(height: 32), // Jarak lebih besar di sini
+                Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Colors.grey[300],
+                    indent: 16,
+                    endIndent: 16), // Pemisah visual
+                const SizedBox(height: 32), // Jarak setelah divider
 
-                // Recommendations Section
+                // Recommendations Section Header
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text(
@@ -457,33 +469,55 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: 180,
-                  child: ListView(
+                  height: 200, // Tinggi tetap, sesuaikan jika perlu
+                  child: ListView.builder(
                     scrollDirection: Axis.horizontal,
+                    itemCount: 3, // Sesuaikan dengan jumlah item mock Anda
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    children: [
-                      // Untuk rekomendasi ini, tidak ada navigasi yang diminta, jadi hanya visual
-                      _buildMedicineCard(
-                        'assets/images/medicine_example_1.png',
-                        'Contoh obat',
-                        'Rp. 20.000',
-                      ),
-                      const SizedBox(width: 16),
-                      _buildMedicineCard(
-                        'assets/images/medicine_example_2.png',
-                        'Contoh obat',
-                        'Rp. 27.000',
-                      ),
-                      const SizedBox(width: 16),
-                      _buildMedicineCard(
-                        'assets/images/medicine_example_3.png',
-                        'Contoh obat',
-                        'Rp. 29.000',
-                      ),
-                    ],
+                    itemBuilder: (context, index) {
+                      // Data dummy untuk rekomendasi
+                      List<Map<String, dynamic>> dummyRecommendations = [
+                        {
+                          'imagePath': 'assets/images/medicine_example_1.png',
+                          'name': 'Immunity Gynella',
+                          'price': 20000.0,
+                        },
+                        {
+                          'imagePath': 'assets/images/medicine_example_2.png',
+                          'name': 'Antibiotic 200mg',
+                          'price': 27000.0,
+                        },
+                        {
+                          'imagePath': 'assets/images/medicine_example_3.png',
+                          'name': 'Remedol 500mg',
+                          'price': 29000.0,
+                        },
+                      ];
+
+                      final item = dummyRecommendations[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                            right: 12.0), // Jarak antar kartu yang lebih rapat
+                        child: _buildMedicineRecommendationCard(
+                          imagePath: item['imagePath']!,
+                          name: item['name']!,
+                          price: item['price']!,
+                          description: item['description'],
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 20),
+
+                // Spacing after Recommendations Section
+                const SizedBox(height: 32), // Jarak lebih besar di sini
+                Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Colors.grey[300],
+                    indent: 16,
+                    endIndent: 16), // Pemisah visual
+                const SizedBox(height: 32), // Jarak setelah divider
 
                 // Summary Sections (Stock and E-Resep)
                 Padding(
@@ -492,45 +526,63 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSummarySection(
-                        title: "Stock",
-                        linkText: "Lihat Stok",
-                        // UBAH LOGIKA linkAction DI SINI untuk pop-up
-                        linkAction: () => _showSimpleModal('Ringkasan Stok',
-                            'Ini adalah ringkasan stok obat.'),
+                        title: "Ringkasan Stok Obat", // Mengubah judul
+                        linkText: "Lihat Selengkapnya", // Mengubah teks link
+                        linkAction: () => _showSimpleModal(
+                            'Ringkasan Stok Obat',
+                            'Ini adalah ringkasan stok obat secara keseluruhan.'),
                         children: [
                           _buildSummaryItem(
                             _mockObatList.length.toString(),
-                            "Jumlah Obat",
-                            Icons.medical_services,
-                            Colors.blue,
+                            "Total Obat Terdaftar", // Mengubah label
+                            Icons.medical_information, // Ikon baru
+                            primaryColor, // Warna primary
+                          ),
+                          _buildSummaryItem(
+                            _medicineStockStatus["hampirHabis"]["count"]
+                                .toString(),
+                            "Obat Hampir Habis",
+                            Icons.warning_amber_rounded,
+                            warningColor,
                           ),
                           _buildSummaryItem(
                             _medicineStockStatus["habis"]["count"].toString(),
-                            "Obat Habis",
-                            Icons.warning_amber_rounded,
-                            Colors.red,
+                            "Obat Habis (Perlu Restock)", // Mengubah label
+                            Icons.outbox_rounded, // Ikon baru
+                            dangerColor,
+                          ),
+                          _buildSummaryItem(
+                            _mostPurchasedMedicine,
+                            "Obat Terlaris", // Label baru
+                            Icons.trending_up_rounded, // Ikon baru
+                            successColor, // Warna sukses
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
                       _buildSummarySection(
-                        title: "e-Eresep",
-                        linkText: "Lihat e-Resep",
-                        // UBAH LOGIKA linkAction DI SINI untuk pop-up
+                        title: "Ringkasan E-Resep", // Mengubah judul
+                        linkText: "Lihat Semua E-Resep", // Mengubah teks link
                         linkAction: () => _showSimpleModal('Ringkasan E-Resep',
-                            'Ini adalah ringkasan e-resep.'),
+                            'Ini adalah ringkasan status e-resep.'),
                         children: [
                           _buildSummaryItem(
-                            _eresepMenungguPembayaran.toString(),
-                            "e-Eresep Baru",
-                            Icons.receipt_long,
-                            Colors.orange,
+                            _totalEresep.toString(),
+                            "Total E-Resep Diterima", // Mengubah label
+                            Icons.assignment_turned_in_rounded, // Ikon baru
+                            secondaryColor, // Warna secondary
                           ),
                           _buildSummaryItem(
-                            _totalEresep.toString(),
-                            "Jumlah e-Eresep",
-                            Icons.description_outlined,
-                            Colors.teal,
+                            _eresepMenungguPembayaran.toString(),
+                            "E-Resep Menunggu Pembayaran",
+                            Icons.hourglass_bottom_rounded, // Ikon baru
+                            warningColor,
+                          ),
+                          _buildSummaryItem(
+                            _pembayaranSelesai.toString(),
+                            "E-Resep Selesai", // Label baru
+                            Icons.check_circle_outline_rounded, // Ikon baru
+                            successColor,
                           ),
                         ],
                       ),
@@ -642,12 +694,19 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(icon, color: iconColor, size: 40),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: iconColor, size: 50),
+                      ),
                       const SizedBox(height: 10),
                       Text(
                         title,
                         style: const TextStyle(
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87),
                         textAlign: TextAlign.center,
@@ -720,9 +779,22 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   }
 
   /// Builds a medicine recommendation card.
-  Widget _buildMedicineCard(String imagePath, String name, String price) {
+  Widget _buildMedicineRecommendationCard({
+    required String imagePath,
+    required String name,
+    required double price,
+    String? description, // Tambahkan deskripsi opsional
+  }) {
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
     return Container(
-      width: 140,
+      width: 150,
+      // Mengubah margin agar lebih rapat
+      // Menggunakan padding di dalam ListView.builder
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
@@ -746,38 +818,54 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
+                debugPrint('ERROR: Gagal memuat aset gambar: $imagePath');
                 return Container(
                   height: 100,
                   width: double.infinity,
                   color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                  child: const Icon(Icons.broken_image,
+                      color: Colors.grey, size: 40),
                 );
               },
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(10.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 15,
+                    color: primaryColor,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  price,
-                  style: TextStyle(
-                    color: primaryColor,
+                  formatCurrency.format(price),
+                  style: const TextStyle(
+                    color: Colors.black87,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 16,
                   ),
                 ),
+                if (description != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
               ],
             ),
           ),

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:login_signup/widgets/header.dart'; // Pastikan CustomHeader Anda ada
-import 'package:login_signup/widgets/menu.dart'; // Pastikan CustomBottomNavBar Anda ada
-import 'package:login_signup/screens/signin_screen.dart'; // Untuk navigasi Signin
+import 'package:login_signup/widgets/header.dart';
+import 'package:login_signup/widgets/menu.dart';
+import 'package:login_signup/screens/signin_screen.dart';
+import 'package:intl/intl.dart'; // Import for currency formatting
 
 // Import halaman-halaman utama lainnya untuk navigasi BottomNavBar
-import 'package:login_signup/pages/petugas/dashboard_petugas.dart'; // Penting untuk navigasi antar menu
-import 'package:login_signup/pages/petugas/obat.dart'; // Penting untuk navigasi antar menu
-import 'package:login_signup/pages/petugas/akun.dart'; // Penting untuk navigasi antar menu
-
-// URL Launcher (Jika Anda ingin mencoba meluncurkan URL atau file, tapi untuk assets PDF lebih baik pakai PDF viewer library)
-// import 'package:url_launcher/url_launcher.dart'; // Uncomment jika sudah di pubspec.yaml dan ingin pakai ini
+import 'package:login_signup/pages/petugas/dashboard_petugas.dart';
+import 'package:login_signup/pages/petugas/obat.dart';
+import 'package:login_signup/pages/petugas/akun.dart';
+import 'package:login_signup/pages/petugas/pdf_viewer_page.dart'; // Import halaman PDF viewer
 
 class EresepPage extends StatefulWidget {
   const EresepPage({super.key});
@@ -34,6 +33,7 @@ class _EresepPageState extends State<EresepPage> {
       "status": "Diproses", // Ini yang akan muncul sebagai "Antrian E-Resep"
       "tanggal_resep": "2024-05-20",
       "detail_resep": {
+        "id_resep": "ER001",
         "poli": "Umum",
         "umur": "28 Tahun",
         "beratBadan": "60 Kg",
@@ -43,14 +43,17 @@ class _EresepPageState extends State<EresepPage> {
           {
             "nama_obat": "Paracetamol 500mg",
             "aturan_pakai": "3x sehari 1 tablet",
-            "kuantitas": 10
+            "kuantitas": 10,
+            "harga_satuan": 2000
           },
           {
             "nama_obat": "Amoxicillin 250mg",
             "aturan_pakai": "3x sehari 1 kapsul",
-            "kuantitas": 7
+            "kuantitas": 7,
+            "harga_satuan": 3000
           },
         ],
+        "catatan": "Resep untuk flu biasa.",
       },
     },
     {
@@ -60,6 +63,7 @@ class _EresepPageState extends State<EresepPage> {
       "status": "Menunggu Pembayaran",
       "tanggal_resep": "2024-05-21",
       "detail_resep": {
+        "id_resep": "ER002",
         "poli": "Anak",
         "umur": "5 Tahun",
         "beratBadan": "20 Kg",
@@ -69,9 +73,11 @@ class _EresepPageState extends State<EresepPage> {
           {
             "nama_obat": "Tempra Sirup",
             "aturan_pakai": "3x sehari 5ml",
-            "kuantitas": 1
+            "kuantitas": 1,
+            "harga_satuan": 35000
           },
         ],
+        "catatan": "Berikan sesuai dosis anak.",
       },
     },
     {
@@ -82,6 +88,7 @@ class _EresepPageState extends State<EresepPage> {
           "Sudah Bayar", // Ini yang akan muncul sebagai "Menunggu Panggilan"
       "tanggal_resep": "2024-05-19",
       "detail_resep": {
+        "id_resep": "ER003",
         "poli": "Gigi",
         "umur": "35 Tahun",
         "beratBadan": "75 Kg",
@@ -91,9 +98,11 @@ class _EresepPageState extends State<EresepPage> {
           {
             "nama_obat": "Mefenamic Acid",
             "aturan_pakai": "2x sehari 1 tablet",
-            "kuantitas": 5
+            "kuantitas": 5,
+            "harga_satuan": 1500
           },
         ],
+        "catatan": "Minum setelah makan.",
       },
     },
     {
@@ -103,6 +112,7 @@ class _EresepPageState extends State<EresepPage> {
       "status": "Selesai",
       "tanggal_resep": "2024-05-18",
       "detail_resep": {
+        "id_resep": "ER004",
         "poli": "Umum",
         "umur": "40 Tahun",
         "beratBadan": "70 Kg",
@@ -112,30 +122,37 @@ class _EresepPageState extends State<EresepPage> {
           {
             "nama_obat": "Bodrex",
             "aturan_pakai": "3x sehari 1 tablet",
-            "kuantitas": 10
+            "kuantitas": 10,
+            "harga_satuan": 1000
           },
         ],
+        "catatan": "Istirahat yang cukup.",
       },
     },
     {
       "id_pendaftaran": "PD005",
-      "nama_pasien": "Cindy Permata",
-      "nama_dokter": "dr. Sari Wulandari",
+      "nama_pasien": "Mabel Pines", // Changed to match the image
+      "nama_dokter": "Dr. Atta", // Changed to match the image
       "status": "Menunggu Pembayaran",
-      "tanggal_resep": "2024-05-22",
+      "tanggal_resep": "2025-05-05", // Changed to match the image
       "detail_resep": {
-        "poli": "Kulit",
-        "umur": "22 Tahun",
-        "beratBadan": "55 Kg",
-        "diagnosa": "Jerawat",
-        "keterangan": "Gunakan sabun muka khusus.",
+        "id_resep": "ER005", // Changed to match the image
+        "poli": "Poli KIA", // Changed to match the image
+        "umur": "34", // Changed to match the image
+        "beratBadan": "58.7", // Changed to match the image
+        "diagnosa": "Alergi Musim", // Changed to match the image
+        "keterangan":
+            "Gunakan sabun muka khusus.", // Not used in new modal design
         "daftarObat": [
           {
-            "nama_obat": "Acne Cream",
-            "aturan_pakai": "2x sehari oleskan tipis",
-            "kuantitas": 1
+            "nama_obat": "Amoxicillin", // Changed to match the image
+            "aturan_pakai":
+                "3x sehari setelah makan", // Changed to match the image
+            "kuantitas": 8, // Changed to match the image
+            "harga_satuan": 15000 // Changed to match the image
           },
         ],
+        "catatan": "Obat alergi musim", // Added this to match the image
       },
     },
   ];
@@ -144,7 +161,6 @@ class _EresepPageState extends State<EresepPage> {
   String _statusFilter = "Semua"; // Currently active filter
   String _searchText = ""; // Search text
   bool _showAll = false; // To show all items if there are more than 12
-  // Map<String, dynamic>? _selectedResep; // Not currently used, can be removed if not needed for future modals
   bool _isLoading = false; // Simulate data loading
 
   final List<String> _categoryOptions = [
@@ -303,72 +319,326 @@ class _EresepPageState extends State<EresepPage> {
 
   /// Shows a detailed modal for a selected prescription.
   void _showResepDetailModal(Map<String, dynamic> resep) {
+    final detailResep = resep['detail_resep'];
+    final List<Map<String, dynamic>> daftarObat =
+        List<Map<String, dynamic>>.from(detailResep['daftarObat'] ?? []);
+
+    double totalHarga = 0;
+    for (var obat in daftarObat) {
+      totalHarga += (obat['kuantitas'] ?? 0) * (obat['harga_satuan'] ?? 0);
+    }
+
+    // Format total harga ke mata uang Rupiah
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Detail E-Resep ${resep['id_pendaftaran']}"),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildDetailRow("ID Pendaftaran", resep['id_pendaftaran']),
-                _buildDetailRow("Nama Pasien", resep['nama_pasien']),
-                _buildDetailRow("Nama Dokter", resep['nama_dokter']),
-                _buildDetailRow("Poli", resep['detail_resep']['poli']),
-                _buildDetailRow("Umur", resep['detail_resep']['umur']),
-                _buildDetailRow(
-                    "Berat Badan", resep['detail_resep']['beratBadan']),
-                _buildDetailRow("Tanggal Resep", resep['tanggal_resep']),
-                _buildDetailRow("Diagnosa", resep['detail_resep']['diagnosa']),
-                _buildDetailRow(
-                    "Keterangan", resep['detail_resep']['keterangan']),
-                const SizedBox(height: 10),
-                const Text("Daftar Obat:",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                if (resep['detail_resep']['daftarObat'] != null)
-                  ...(resep['detail_resep']['daftarObat'] as List)
-                      .map((obat) => Padding(
-                            padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                            child: Text(
-                                "${obat['nama_obat']} (${obat['kuantitas']}) - ${obat['aturan_pakai']}"),
-                          ))
-                      .toList(),
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 0,
+          backgroundColor:
+              Colors.transparent, // Make dialog background transparent
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
               ],
             ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Tutup'),
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title and Close Button (Optional, can be put in AppBar if using AlertDialog)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      icon: Icon(Icons.close, color: Colors.grey[600]),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  Text(
+                    "Detail E-Resep",
+                    style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Patient and Prescription Info Grid
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    childAspectRatio: 3.5, // Adjust as needed
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    children: [
+                      _buildDetailItem("Nama Pasien", resep['nama_pasien']),
+                      _buildDetailItem("ID Resep", detailResep['id_resep']),
+                      _buildDetailItem("Umur", detailResep['umur']),
+                      _buildDetailItem(
+                          "Berat Badan", detailResep['beratBadan'].toString()),
+                      _buildDetailItem("Poli", detailResep['poli']),
+                      _buildDetailItem(
+                          "Tanggal E-Resep", resep['tanggal_resep']),
+                      _buildDetailItem("Dokter", resep['nama_dokter']),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Diagnosa Section
+                  _buildSectionCard(
+                    title: "Diagnosa",
+                    content: detailResep['diagnosa'] ?? '-',
+                    icon: Icons.medical_information,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Daftar Obat Table
+                  Text(
+                    "Daftar Obat:",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(3), // Nama Obat
+                        1: FlexColumnWidth(4), // Aturan Pakai
+                        2: FlexColumnWidth(2), // Kuantitas
+                        3: FlexColumnWidth(3), // Harga Satuan
+                      },
+                      children: [
+                        TableRow(
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(7)),
+                          ),
+                          children: [
+                            _buildTableHeaderCell("Nama Obat"),
+                            _buildTableHeaderCell("Aturan Pakai"),
+                            _buildTableHeaderCell("Qty"), // Shortened
+                            _buildTableHeaderCell("Harga"), // Shortened
+                          ],
+                        ),
+                        ...(daftarObat.isEmpty
+                            ? [
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Text(
+                                          "Tidak ada obat terdaftar.",
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              color: Colors.grey[700]),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(child: Container()),
+                                    TableCell(child: Container()),
+                                    TableCell(child: Container()),
+                                  ],
+                                )
+                              ]
+                            : daftarObat.map((obat) {
+                                return TableRow(
+                                  children: [
+                                    _buildTableCell(obat['nama_obat']),
+                                    _buildTableCell(obat['aturan_pakai']),
+                                    _buildTableCell(
+                                        obat['kuantitas']?.toString() ?? '-'),
+                                    _buildTableCell(formatCurrency
+                                        .format(obat['harga_satuan'] ?? 0)),
+                                  ],
+                                );
+                              }).toList()),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Catatan Section
+                  _buildSectionCard(
+                    title: "Catatan",
+                    content: detailResep['catatan'] ?? '-',
+                    icon: Icons.notes,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Total Harga Section
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: secondaryColor.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: primaryColor, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Total Harga Obat",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          formatCurrency.format(totalHarga),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Print Resep Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Implement print functionality
+                        _showSimpleModal("Fungsi Cetak",
+                            "Fitur cetak resep akan segera hadir!");
+                      },
+                      icon: const Icon(Icons.print, color: Colors.white),
+                      label: const Text(
+                        "Cetak E-Resep",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         );
       },
     );
   }
 
-  /// Builds a row for displaying detail information in the modal.
-  Widget _buildDetailRow(String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
+  /// Helper for building an individual detail item with a label and value.
+  Widget _buildDetailItem(String label, String? value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value ?? "-",
+          style: TextStyle(
+              fontSize: 15, fontWeight: FontWeight.w600, color: primaryColor),
+        ),
+      ],
+    );
+  }
+
+  /// Helper for building a section card with a title, content, and icon.
+  Widget _buildSectionCard({
+    required String title,
+    required String content,
+    required IconData icon,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: accentColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              "$label :",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 20, color: primaryColor),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor),
+              ),
+            ],
           ),
-          Expanded(
-            child: Text(value ?? "-"),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: TextStyle(fontSize: 15, color: Colors.grey[800]),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Helper for building table header cells.
+  static Widget _buildTableHeaderCell(String text) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  /// Helper for building table content cells.
+  static Widget _buildTableCell(String text) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, color: Colors.black87),
+        ),
       ),
     );
   }
@@ -389,6 +659,8 @@ class _EresepPageState extends State<EresepPage> {
         antreanCounter++;
         antreanMap[item['id_pendaftaran']] = antreanCounter;
       }
+      // Reset counter if there's a different status, or if you only want to count 'Diproses' consecutively
+      // For this implementation, it counts 'Diproses' globally in the filtered list.
     }
 
     return Scaffold(
@@ -432,14 +704,13 @@ class _EresepPageState extends State<EresepPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Menampilkan E-resep',
+                        'Menampilkan daftar E-Resep pasien.',
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                       const SizedBox(height: 16),
 
                       // Categories / Status Filter Buttons
                       _buildCategoriesSection(),
-                      // --- PERUBAHAN DI SINI: Mengurangi SizedBox dari 24 menjadi 16 ---
                       const SizedBox(height: 16),
 
                       // List Resep Cards
@@ -464,7 +735,7 @@ class _EresepPageState extends State<EresepPage> {
                                 ),
 
                       // "Lihat Semua" button if more data
-                      if (_filteredAndSortedData.length > 12)
+                      if (_filteredAndSortedData.length > 12 && !_showAll)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           child: Center(
@@ -485,6 +756,34 @@ class _EresepPageState extends State<EresepPage> {
                               ),
                               child: Text(
                                   _showAll ? "Sembunyikan" : "Lihat Semua"),
+                            ),
+                          ),
+                        ),
+                      // "Sembunyikan" button if showing all
+                      if (_filteredAndSortedData.length > 12 && _showAll)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _showAll = !_showAll;
+                                  _scrollController.animateTo(0,
+                                      duration:
+                                          const Duration(milliseconds: 500),
+                                      curve: Curves.easeInOut);
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: primaryColor,
+                                side: BorderSide(color: primaryColor),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text("Sembunyikan"),
                             ),
                           ),
                         ),
@@ -676,41 +975,6 @@ class _EresepPageState extends State<EresepPage> {
     );
   }
 
-  /// Builds the sort by dropdown.
-  // Widget _buildSortByDropdown() { // Seluruh fungsi ini dihapus
-  //   return DropdownButtonFormField<String>(
-  //     decoration: InputDecoration(
-  //       labelText: 'Urutkan',
-  //       border: OutlineInputBorder(
-  //         borderRadius: BorderRadius.circular(8),
-  //         borderSide: BorderSide(color: Colors.grey[400]!),
-  //       ),
-  //       enabledBorder: OutlineInputBorder(
-  //         borderRadius: BorderRadius.circular(8),
-  //         borderSide: BorderSide(color: Colors.grey[400]!),
-  //       ),
-  //       focusedBorder: OutlineInputBorder(
-  //         borderRadius: BorderRadius.circular(8),
-  //         borderSide: BorderSide(color: primaryColor, width: 2),
-  //       ),
-  //       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  //     ),
-  //     value: _sortBy.isEmpty ? null : _sortBy,
-  //     hint: const Text("Urutkan"),
-  //     items: const [
-  //       DropdownMenuItem(value: "nama", child: Text("Nama Pasien (A-Z)")),
-  //       DropdownMenuItem(value: "dokter", child: Text("Nama Dokter (A-Z)")),
-  //       DropdownMenuItem(value: "id", child: Text("ID Pendaftaran (A-Z)")),
-  //     ],
-  //     onChanged: (value) {
-  //       setState(() {
-  //         _sortBy = value ?? "";
-  //         _filterAndSortResep(); // Re-call when sorting changes
-  //       });
-  //     },
-  //   );
-  // }
-
   /// Builds the search input field.
   Widget _buildSearchInput() {
     // Search input ini dihapus karena sudah ada search bar di CustomHeader.
@@ -723,94 +987,205 @@ class _EresepPageState extends State<EresepPage> {
     String displayStatus =
         _statusDisplayMap[resep['status']] ?? resep['status'];
     Color statusColor;
-    String actionText;
-    Color actionColor;
-    VoidCallback onActionTap;
+    IconData statusIcon;
 
-    // Perubahan logika untuk tombol aksi
-    if (resep['status'] == "Diproses") {
-      statusColor = primaryColor; // Color for "Antrian E-Resep"
-      actionText = "Terima"; // Tombol "Terima" untuk status "Diproses"
-      actionColor = Colors.green;
-      onActionTap = () {
-        _showSimpleModal("Resep Diterima",
-            "E-Resep ${resep['id_pendaftaran']} telah diterima (Diproses).");
-        // Di sini Anda bisa menambahkan logika untuk benar-benar mengubah status jika diperlukan
-        // _updateResepStatus(resep['id_pendaftaran'], "Selesai"); // Contoh: Jika Terima berarti Selesai
-      };
+    // Determine status color and icon
+    if (resep['status'] == "Menunggu Pembayaran") {
+      statusColor = Colors.orange;
+      statusIcon = Icons.payment;
     } else if (resep['status'] == "Sudah Bayar") {
-      statusColor = Colors.blue; // Color for "Menunggu Panggilan"
-      actionText = "Panggil"; // Tombol "Panggil" untuk status "Sudah Bayar"
-      actionColor = Colors.blueAccent; // Warna untuk tombol Panggil
-      onActionTap = () {
-        _showSimpleModal("Panggilan Pasien",
-            "Pasien ${resep['nama_pasien']} dengan ID ${resep['id_pendaftaran']} akan dipanggil.");
-        // Di sini Anda bisa menambahkan logika untuk mengubah status menjadi "Diproses" setelah dipanggil
-        // _updateResepStatus(resep['id_pendaftaran'], "Diproses");
-      };
+      statusColor = Colors.blue;
+      statusIcon = Icons.call;
+    } else if (resep['status'] == "Diproses") {
+      statusColor = primaryColor;
+      statusIcon = Icons.receipt_long;
+    } else if (resep['status'] == "Selesai") {
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
     } else {
-      statusColor = Colors
-          .orange; // Default for other statuses (e.g., Menunggu Pembayaran)
-      actionText = "Lihat"; // Tombol default jika tidak ada aksi spesifik
-      actionColor = Colors.grey;
-      onActionTap = () {
-        _showSimpleModal("Aksi Tidak Diizinkan",
-            "Resep ini masih berstatus '${resep['status']}'.");
-      };
+      statusColor = Colors.grey;
+      statusIcon = Icons.info_outline;
+    }
+
+    // Action for "Detail" button
+    void onDetailTap() {
+      _showResepDetailModal(resep);
+    }
+
+    Widget actionButtons;
+
+    if (resep['status'] == "Menunggu Pembayaran") {
+      actionButtons = SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: onDetailTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+          child: const Text("Detail"),
+        ),
+      );
+    } else if (resep['status'] == "Sudah Bayar") {
+      actionButtons = Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                _updateResepStatus(resep['id_pendaftaran'], "Diproses");
+                _showSimpleModal("Panggilan Pasien",
+                    "Pasien ${resep['nama_pasien']} dengan ID ${resep['id_pendaftaran']} akan dipanggil. Status diubah menjadi Antrian E-Resep.");
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: const Text("Panggil"),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: onDetailTap,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryColor,
+                side: BorderSide(color: primaryColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: const Text("Detail"),
+            ),
+          ),
+        ],
+      );
+    } else if (resep['status'] == "Diproses") {
+      actionButtons = SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () {
+            _updateResepStatus(resep['id_pendaftaran'], "Selesai");
+            _showSimpleModal("Resep Selesai",
+                "E-Resep ${resep['id_pendaftaran']} telah Selesai.");
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green, // Warna hijau untuk Selesai
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+          child: const Text("Selesai"),
+        ),
+      );
+    } else if (resep['status'] == "Selesai") {
+      actionButtons = SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: onDetailTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+          child: const Text("Detail"),
+        ),
+      );
+    } else {
+      statusColor = Colors.grey;
+      statusIcon = Icons.info_outline;
+      actionButtons = SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: onDetailTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+          child: const Text("Detail"),
+        ),
+      );
     }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3, // Increased elevation for a slightly more prominent look
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: primaryColor, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('ID Pendaftaran', resep['id_pendaftaran']),
-            _buildInfoRow('Nama Pasien', resep['nama_pasien']),
-            _buildInfoRow('Dokter', resep['nama_dokter']),
-            _buildInfoRow('Status', displayStatus,
-                valueColor: statusColor, fontWeight: FontWeight.bold),
-            if (resep['status'] == "Diproses" && antreanNo != null)
-              _buildInfoRow('Antrian Ke', antreanNo.toString(),
-                  valueColor: primaryColor, fontWeight: FontWeight.bold),
-            const SizedBox(height: 10),
+            // Header Section with ID and Status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onActionTap,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: actionColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: Text(actionText),
+                Text(
+                  'ID Pendaftaran: ${resep['id_pendaftaran']}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _showResepDetailModal(resep),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: primaryColor,
-                      side: BorderSide(color: primaryColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(statusIcon, size: 16, color: statusColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        displayStatus,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: const Text("Detail"),
+                    ],
                   ),
                 ),
               ],
             ),
+            const Divider(
+                height: 20, thickness: 1), // Divider for visual separation
+
+            // Patient and Doctor Information
+            _buildInfoRow('Nama Pasien', resep['nama_pasien']),
+            _buildInfoRow('Dokter', resep['nama_dokter']),
+
+            if (resep['status'] == "Diproses" && antreanNo != null)
+              _buildInfoRow('Antrian Ke', antreanNo.toString(),
+                  valueColor: primaryColor, fontWeight: FontWeight.bold),
+
+            const SizedBox(height: 15), // Increased spacing before buttons
+            actionButtons,
           ],
         ),
       ),
@@ -847,9 +1222,10 @@ class _EresepPageState extends State<EresepPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: Colors.white, // Changed to white
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(
+            color: primaryColor, width: 1.5), // Changed border color and width
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -919,14 +1295,15 @@ class _EresepPageState extends State<EresepPage> {
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: ElevatedButton.icon(
           onPressed: () {
-            // Placeholder: Menampilkan modal daripada mencoba membuka PDF
-            // karena url_launcher tidak mendukung PDF dari assets secara langsung.
-            _showSimpleModal(
-              "Fitur Petunjuk",
-              "Fitur ini akan menampilkan petunjuk penggunaan E-Resep. "
-                  "Implementasi pembaca PDF dari assets memerlukan library khusus "
-                  "(misal: `flutter_pdfview`) atau penyimpanan file ke direktori "
-                  "sementara untuk dibuka aplikasi eksternal.",
+            // Navigasi ke halaman PdfViewerPage saat tombol diklik
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PdfViewerPage(
+                  path: 'assets/pdf/petunjuk.pdf', // Path aset PDF
+                  title: 'Petunjuk Penggunaan E-Resep',
+                ),
+              ),
             );
           },
           icon: Icon(Icons.description,
