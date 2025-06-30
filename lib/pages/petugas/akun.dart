@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-// Header dan Inti (menu) akan diganti, jadi tidak perlu import lagi CustomHeader
 import 'package:login_signup/widgets/menu.dart'; // Pastikan CustomBottomNavBar Anda ada
 import 'package:login_signup/screens/signin_screen.dart'; // Untuk navigasi Signin
+import 'package:shared_preferences/shared_preferences.dart'; // <<< TAMBAHKAN INI
 
 // Import halaman-halaman utama lainnya untuk navigasi BottomNavBar
 import 'package:login_signup/pages/petugas/dashboard_petugas.dart';
@@ -21,20 +21,15 @@ class _AkunPageState extends State<AkunPage> {
   final Color secondaryColor = const Color(0xFF6B8FB4);
   final Color accentColor =
       const Color(0xFFF0F4F8); // Warna latar belakang terang
-  // final Color tealColor = const Color(0xFF00BCD4); // Dihapus
-  // final Color lightTealColor = const Color(0xFF4DD0E1); // Dihapus
   final Color redColor =
       const Color(0xFFD32F2F); // Warna merah untuk tombol logout
 
-  // --- Mock Data Pengguna ---
-  final Map<String, dynamic> _userData = {
-    "id_user": "U001",
-    "email": "raihanfg565@gmail.com",
-    "password": "", // Password tidak ditampilkan
-    "nama_user": "DON Jumbo",
-    "role": "petugas",
-    "foto_user": "jumbo.jpeg", // Nama file gambar profil (akan diabaikan)
-  };
+  // --- Data Pengguna yang akan dimuat dari SharedPreferences ---
+  String? _userId;
+  String? _userEmail;
+  String? _userName;
+  String? _userRole;
+  String? _userPhoto; // Akan menjadi nama file foto saja, misal "jumbo.jpeg"
 
   // --- UI State Variables ---
   int _selectedIndex =
@@ -43,6 +38,7 @@ class _AkunPageState extends State<AkunPage> {
   @override
   void initState() {
     super.initState();
+    _loadUserData(); // Panggil fungsi untuk memuat data pengguna saat inisialisasi
   }
 
   @override
@@ -51,6 +47,21 @@ class _AkunPageState extends State<AkunPage> {
   }
 
   // --- Methods ---
+
+  /// Fungsi untuk memuat data pengguna dari SharedPreferences
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userId = prefs.getString('user_id');
+      _userEmail = prefs.getString('user_email');
+      _userName = prefs.getString('user_name');
+      _userRole = prefs.getString('user_role');
+      _userPhoto =
+          prefs.getString('user_photo'); // Asumsi Anda menyimpan ini saat login
+    });
+    // Optional: Fetch more detailed data from API if needed, using _userId
+    // Example: _fetchDetailedUserData(_userId!);
+  }
 
   /// Shows a simple modal dialog with a title and content.
   void _showSimpleModal(String title, String content) {
@@ -104,6 +115,10 @@ class _AkunPageState extends State<AkunPage> {
     );
 
     if (confirm == true) {
+      // Hapus semua data dari SharedPreferences saat logout
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Menghapus semua data yang disimpan
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -161,8 +176,13 @@ class _AkunPageState extends State<AkunPage> {
   }
 
   Widget _buildProfileHeader() {
+    // URL dasar untuk gambar profil
+    // Sesuaikan ini jika domain atau path "/images/user/" berubah
+    final String baseImageUrl = "https://ti054b05.agussbn.my.id/images/user/";
+    final String fullImageUrl =
+        _userPhoto != null ? '$baseImageUrl$_userPhoto' : '';
+
     return Container(
-      // Menggunakan Container dengan BorderRadius langsung
       width: double.infinity,
       height: 200, // TINGGI HEADER disesuaikan menjadi 200
       decoration: BoxDecoration(
@@ -200,9 +220,15 @@ class _AkunPageState extends State<AkunPage> {
                     CircleAvatar(
                       radius: 40, // Mengurangi radius avatar
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.person,
-                          size: 45,
-                          color: primaryColor), // Warna ikon disesuaikan
+                      // Jika _userPhoto tersedia dan bukan kosong, tampilkan NetworkImage
+                      // Jika tidak, tampilkan ikon default
+                      backgroundImage: (_userPhoto != null &&
+                              _userPhoto!.isNotEmpty)
+                          ? NetworkImage(fullImageUrl) as ImageProvider<Object>?
+                          : null,
+                      child: (_userPhoto == null || _userPhoto!.isEmpty)
+                          ? Icon(Icons.person, size: 45, color: primaryColor)
+                          : null, // Jika ada gambar, jangan tampilkan ikon
                     ),
                     Positioned(
                       right: 0,
@@ -210,19 +236,15 @@ class _AkunPageState extends State<AkunPage> {
                       child: CircleAvatar(
                         radius: 15, // Ukuran lingkaran edit
                         backgroundColor: primaryColor,
-                        child: Icon(
-                            // Ikon edit langsung, bukan IconButton di dalam CircleAvatar
-                            Icons.edit,
-                            color: Colors.white,
-                            size: 15 // Ukuran ikon edit
-                            ),
+                        child: Icon(Icons.edit,
+                            color: Colors.white, size: 15), // Ukuran ikon edit
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8), // Mengurangi spasi
                 Text(
-                  _userData['nama_user'] ?? 'Nama Pengguna',
+                  _userName ?? 'Nama Pengguna', // Tampilkan nama dari state
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16, // Mengurangi ukuran font nama
@@ -230,7 +252,8 @@ class _AkunPageState extends State<AkunPage> {
                   ),
                 ),
                 Text(
-                  _userData['email'] ?? 'email@example.com',
+                  _userEmail ??
+                      'email@example.com', // Tampilkan email dari state
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11, // Mengurangi ukuran font email
@@ -282,7 +305,6 @@ class _AkunPageState extends State<AkunPage> {
     return Column(
       children: [
         Card(
-          // Menggunakan Card untuk setiap ListTile agar ada elevasi dan rounded corner
           elevation: 1, // Elevasi minimal
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10), // Sudut melengkung
@@ -301,7 +323,6 @@ class _AkunPageState extends State<AkunPage> {
                 ? null
                 : Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
             onTap: onTap,
-            // tileColor: Colors.white, // Tidak perlu tileColor jika pakai Card
           ),
         ),
         const SizedBox(height: 10), // Spasi antar item menu
@@ -309,31 +330,6 @@ class _AkunPageState extends State<AkunPage> {
     );
   }
 }
-
-// Custom Clipper untuk bentuk gelombang di header (DIHAPUS KARENA MENGGUNAKAN BORDERRADIUS)
-// class WaveClipper extends CustomClipper<Path> {
-//   @override
-//   Path getClip(Size size) {
-//     var path = Path();
-//     path.lineTo(0, size.height * 0.75);
-//     path.quadraticBezierTo(
-//       size.width / 4, size.height,
-//       size.width / 2, size.height * 0.75
-//     );
-//     path.quadraticBezierTo(
-//       size.width * 3 / 4, size.height * 0.5,
-//       size.width, size.height * 0.75
-//     );
-//     path.lineTo(size.width, 0);
-//     path.close();
-//     return path;
-//   }
-
-//   @override
-//   bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
-//     return false;
-//   }
-// }
 
 // Custom Painter untuk gelombang di latar belakang (masih digunakan untuk gelombang putih transparan)
 class WavePainter extends CustomPainter {

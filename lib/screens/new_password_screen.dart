@@ -1,8 +1,12 @@
+// lib/screens/new_password_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // Untuk SVG logo jika digunakan
-// Asumsi CustomScaffold ada dan menangani latar belakang umum
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart'; // Digunakan untuk mendapatkan userId sementara
+
 import '../widgets/custom_scaffold.dart';
-import 'signin_screen.dart'; // Untuk navigasi kembali ke login
+import 'signin_screen.dart';
 
 class NewPasswordScreen extends StatefulWidget {
   const NewPasswordScreen({super.key});
@@ -13,54 +17,86 @@ class NewPasswordScreen extends StatefulWidget {
 
 class _NewPasswordScreenState extends State<NewPasswordScreen>
     with SingleTickerProviderStateMixin {
-  // Tambahkan SingleTickerProviderStateMixin
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  // State untuk toggle visibilitas password
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
-  // State untuk pesan error
   String _passwordError = '';
   String _confirmPasswordError = '';
-  String _errorMessage = ''; // Error global
-  bool _showSuccessModal = false; // State untuk menampilkan modal sukses
+  String _errorMessage = '';
+  bool _isLoading = false;
+  bool _showSuccessModal = false;
 
-  // Animasi untuk modal sukses
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Mendefinisikan warna heksadesimal sesuai dengan desain web
-  final Color primaryColor = const Color(0xFF2A4D69); // Warna utama
-  final Color darkTextColor = const Color(0xFF1D242E); // Warna teks gelap
-  final Color blackTextColor = const Color(0xFF000000); // Warna hitam murni
-  final Color hintAndLabelColor = Colors.black54; // Ini sudah ditambahkan
+  final Color primaryColor = const Color(0xFF2A4D69);
+  final Color darkTextColor = const Color(0xFF1D242E);
+  final Color blackTextColor = const Color(0xFF000000);
+  final Color hintAndLabelColor = Colors.black54;
+
+  String? _currentUserId; // State untuk menyimpan userId dari SharedPreferences
+  String?
+      _currentEmail; // State untuk menyimpan email dari SharedPreferences (opsional)
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi AnimationController
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300), // Durasi animasi fade-in
+      duration: const Duration(milliseconds: 300),
     );
-    // Inisialisasi Animation (Tween untuk fade dari 0.0 ke 1.0)
     _fadeAnimation =
         Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+
+    _loadUserIdAndEmail(); // Panggil fungsi untuk memuat data saat inisialisasi
+  }
+
+  // Fungsi untuk memuat userId dan email dari SharedPreferences
+  Future<void> _loadUserIdAndEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loadedUserId = prefs.getString('current_reset_user_id');
+    final loadedEmail = prefs.getString('current_reset_email');
+
+    if (loadedUserId != null) {
+      setState(() {
+        _currentUserId = loadedUserId;
+        _currentEmail = loadedEmail;
+      });
+      print(
+          "NewPasswordScreen: Loaded userId: $_currentUserId, email: $_currentEmail");
+    } else {
+      // Jika userId tidak ditemukan, tampilkan pesan error dan arahkan kembali
+      setState(() {
+        _errorMessage =
+            "ID pengguna tidak ditemukan. Silakan mulai proses reset password dari awal.";
+      });
+      print("NewPasswordScreen: userId not found in SharedPreferences.");
+      // Opsional: Langsung arahkan kembali ke halaman login setelah beberapa detik jika userId tidak ditemukan
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          // Pastikan widget masih ada sebelum navigasi
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const SignInScreen()),
+              (route) => false);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _animationController.dispose(); // Pastikan controller di-dispose
+    _animationController.dispose();
     super.dispose();
   }
 
-  // Fungsi validasi password sesuai logika ReactJS
   String? _validatePassword(String? password) {
     if (password == null || password.isEmpty) {
       return "Password tidak boleh kosong.";
@@ -74,71 +110,108 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
     if (!password.contains(RegExp(r'[A-Z]'))) {
       return "Password harus mengandung huruf kapital.";
     }
-    return null; // Validasi sukses
+    return null;
   }
 
-  // Fungsi handleSubmit
-  void _handleSubmit() {
-    // Reset semua pesan error sebelumnya
+  void _handleSubmit() async {
     setState(() {
       _passwordError = '';
       _confirmPasswordError = '';
       _errorMessage = '';
+      _isLoading = true;
     });
 
-    // Panggil validate() pada FormKey untuk menjalankan validator di semua TextFormField
+    if (_currentUserId == null) {
+      setState(() {
+        _errorMessage =
+            "ID pengguna tidak tersedia. Silakan mulai proses reset password dari awal.";
+        _isLoading = false;
+      });
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
-      // Validasi password (custom)
       final String? passwordValidation =
           _validatePassword(_passwordController.text);
       if (passwordValidation != null) {
         setState(() {
           _passwordError = passwordValidation;
+          _isLoading = false;
         });
         return;
       }
 
-      // Validasi konfirmasi password
       if (_passwordController.text != _confirmPasswordController.text) {
         setState(() {
           _confirmPasswordError = "Konfirmasi password tidak cocok.";
+          _isLoading = false;
         });
         return;
       }
 
-      // --- Simulasi Logika API (sesuai "tidak pakai api kok") ---
-      // Karena tidak ada API, kita langsung anggap sukses
-      print(
-          "Mengubah password untuk email ... dengan password: ${_passwordController.text}");
+      final String newPassword = _passwordController.text;
+      // URL API yang di-deploy: https://ti054b05.agussbn.my.id/api/user/:id/password (PUT request)
+      final String apiUrl =
+          "https://ti054b05.agussbn.my.id/api/user/${_currentUserId}/password";
 
-      // Menampilkan modal sukses setelah password dianggap berhasil diubah
-      setState(() {
-        _showSuccessModal = true;
-      });
-      _animationController.forward(from: 0.0); // Memulai animasi fade-in
+      try {
+        final response = await http.put(
+          Uri.parse(apiUrl),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'password': newPassword,
+          }),
+        );
 
-      // Bersihkan field password setelah sukses
-      _passwordController.clear();
-      _confirmPasswordController.clear();
+        if (response.statusCode == 200) {
+          print("Password berhasil diubah untuk UserID: ${_currentUserId}");
+
+          setState(() {
+            _showSuccessModal = true;
+          });
+          _animationController.forward(from: 0.0);
+
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+
+          // Hapus userId dari SharedPreferences setelah password berhasil diubah
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('current_reset_user_id');
+          await prefs.remove('current_reset_email'); // Hapus juga email
+        } else {
+          final errorData = json.decode(response.body);
+          setState(() {
+            _errorMessage = errorData['error'] ??
+                "Gagal mengubah password. Mohon coba lagi.";
+          });
+          print("API Error: ${response.statusCode} - ${response.body}");
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage =
+              "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
+        });
+        print("Network/API Call Error: $e");
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } else {
-      // Jika validasi form dasar gagal
       setState(() {
         _errorMessage = "Mohon lengkapi semua field dengan benar.";
+        _isLoading = false;
       });
     }
   }
 
-  // Fungsi untuk tombol "Lanjutkan" pada modal sukses
   void _handleSuccessModalContinue() {
     _animationController.reverse().then((_) {
-      // Animasi fade-out sebelum navigasi
       setState(() {
         _showSuccessModal = false;
       });
-      // Navigasi ke halaman login dan hapus semua rute sebelumnya
-      // Hapus data reset_email dan reset_code jika disimpan di SharedPreferences/localStorage sebelumnya
-      // SharedPreferences.getInstance().then((prefs) => prefs.remove('reset_email'));
-      // SharedPreferences.getInstance().then((prefs) => prefs.remove('reset_code'));
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -149,126 +222,85 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Tombol "Ubah Password" akan dinonaktifkan jika ada field yang kosong
-    // atau jika validasi awal belum memenuhi (misal, panjang password min)
-    // Catatan: isSubmitDisabled ini tidak lagi digunakan karena onPressed diatur langsung ke _handleSubmit
-    // Ini adalah komentar yang berguna jika Anda ingin mengaktifkan kembali validasi disabled button
-    // final bool isSubmitDisabled = _passwordController.text.isEmpty ||
-    //     _confirmPasswordController.text.isEmpty ||
-    //     _validatePassword(_passwordController.text) !=
-    //         null || // Tambahkan validasi password ke disabled state
-    //     _passwordController.text !=
-    //         _confirmPasswordController
-    //             .text; // Juga jika confirm password tidak cocok
+    // Tombol nonaktif jika loading atau userId belum dimuat
+    final bool isSubmitDisabled = _isLoading || _currentUserId == null;
 
     return CustomScaffold(
-      // Menggunakan CustomScaffold untuk latar belakang
       child: Stack(
-        // Menggunakan Stack agar modal bisa overlay
         children: [
           Column(
             children: [
-              const Expanded(
-                flex: 0,
-                child: SizedBox(height: 0),
-              ),
+              const Expanded(flex: 0, child: SizedBox(height: 0)),
               Expanded(
                 flex: 1,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(25.0, 50.0, 25.0, 20.0),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(40.0), // Rounded top corners
-                    ),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(40.0)),
                   ),
                   child: SingleChildScrollView(
                     child: Form(
                       key: _formKey,
-                      autovalidateMode: AutovalidateMode
-                          .onUserInteraction, // Validasi saat pengguna interaksi
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // --- Logo dan Label Pharmacy ---
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              SvgPicture.asset(
-                                'assets/images/logo.svg', // Pastikan path ini benar
-                                height: 50,
-                                width: 50,
-                              ),
+                              SvgPicture.asset('assets/images/logo.svg',
+                                  height: 50, width: 50),
                               const SizedBox(width: 5),
-                              Text(
-                                'Pharmacy',
-                                style: TextStyle(
-                                  fontSize: 30.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: darkTextColor,
-                                ),
-                              ),
+                              Text('Pharmacy',
+                                  style: TextStyle(
+                                      fontSize: 30.0,
+                                      fontWeight: FontWeight.bold,
+                                      color: darkTextColor)),
                             ],
                           ),
                           const SizedBox(height: 20.0),
-
-                          // --- Judul "Buat Password Baru" ---
-                          Text(
-                            'Buat Password Baru',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 35.0,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
+                          Text('Buat Password Baru',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 35.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor)),
                           const SizedBox(height: 15.0),
-
-                          // --- Deskripsi ---
                           Text(
-                            'Buat Password yang berbeda dari sebelumnya untuk keamanan akun Anda',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.normal,
-                              color: blackTextColor,
-                            ),
-                          ),
+                              'Buat Password yang berbeda dari sebelumnya untuk keamanan akun Anda',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 18.0,
+                                  fontWeight: FontWeight.normal,
+                                  color: blackTextColor)),
                           const SizedBox(height: 30.0),
-
-                          // --- Pesan Error Global (jika ada) ---
                           if (_errorMessage.isNotEmpty)
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(12.0),
                               margin: const EdgeInsets.only(bottom: 20.0),
                               decoration: BoxDecoration(
-                                color: Colors.red.shade100,
-                                borderRadius: BorderRadius.circular(8.0),
-                                border: Border.all(color: Colors.red.shade400),
-                              ),
-                              child: Text(
-                                _errorMessage,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.red.shade700,
-                                  fontSize: 14.0,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  border:
+                                      Border.all(color: Colors.red.shade400)),
+                              child: Text(_errorMessage,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 14.0,
+                                      fontWeight: FontWeight.bold)),
                             ),
-
-                          // --- Input Password Baru ---
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Password',
-                                style: TextStyle(
-                                    color: primaryColor,
-                                    fontWeight: FontWeight.w500),
-                              ),
+                              Text('Password',
+                                  style: TextStyle(
+                                      color: primaryColor,
+                                      fontWeight: FontWeight.w500)),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _passwordController,
@@ -280,32 +312,25 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
                                   border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10)),
                                   focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: primaryColor),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                                      borderSide:
+                                          BorderSide(color: primaryColor),
+                                      borderRadius: BorderRadius.circular(10)),
                                   errorBorder: OutlineInputBorder(
-                                    // Border saat ada error
-                                    borderSide: const BorderSide(
-                                        color:
-                                            Colors.black12), // Warna disamakan
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                                      borderSide: const BorderSide(
+                                          color: Colors.black12),
+                                      borderRadius: BorderRadius.circular(10)),
                                   focusedErrorBorder: OutlineInputBorder(
-                                    // Border saat ada error dan fokus
-                                    borderSide: BorderSide(
-                                        color: primaryColor), // Warna disamakan
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  errorStyle: const TextStyle(
-                                      height: 0,
-                                      fontSize: 0), // Sembunyikan teks error
+                                      borderSide:
+                                          BorderSide(color: primaryColor),
+                                      borderRadius: BorderRadius.circular(10)),
+                                  errorStyle:
+                                      const TextStyle(height: 0, fontSize: 0),
                                   suffixIcon: IconButton(
                                     icon: Icon(
-                                      _showPassword
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: primaryColor,
-                                    ),
+                                        _showPassword
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: primaryColor),
                                     onPressed: () {
                                       setState(() {
                                         _showPassword = !_showPassword;
@@ -314,41 +339,31 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
                                   ),
                                 ),
                                 onChanged: (value) {
-                                  // Kosongkan error saat mengetik
                                   setState(() {
                                     _passwordError = '';
                                     _errorMessage = '';
                                   });
-                                  // Re-validate form when text changes to update button state
                                   _formKey.currentState?.validate();
                                 },
-                                // Menggunakan validator untuk validasi form yang terintegrasi
                                 validator: _validatePassword,
                               ),
-                              // Menampilkan pesan error khusus di bawah field
                               if (_passwordError.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    _passwordError,
-                                    style: TextStyle(
-                                        color: Colors.red[700], fontSize: 12.0),
-                                  ),
-                                ),
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(_passwordError,
+                                        style: TextStyle(
+                                            color: Colors.red[700],
+                                            fontSize: 12.0))),
                             ],
                           ),
                           const SizedBox(height: 25.0),
-
-                          // --- Input Konfirmasi Password ---
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Konfirmasi Password',
-                                style: TextStyle(
-                                    color: primaryColor,
-                                    fontWeight: FontWeight.w500),
-                              ),
+                              Text('Konfirmasi Password',
+                                  style: TextStyle(
+                                      color: primaryColor,
+                                      fontWeight: FontWeight.w500)),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _confirmPasswordController,
@@ -360,33 +375,25 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
                                   border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10)),
                                   focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: primaryColor),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                                      borderSide:
+                                          BorderSide(color: primaryColor),
+                                      borderRadius: BorderRadius.circular(10)),
                                   errorBorder: OutlineInputBorder(
-                                    // Border saat ada error
-                                    borderSide: const BorderSide(
-                                        color:
-                                            Colors.black12), // Warna disamakan
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                                      borderSide: const BorderSide(
+                                          color: Colors.black12),
+                                      borderRadius: BorderRadius.circular(10)),
                                   focusedErrorBorder: OutlineInputBorder(
-                                    // Border saat ada error dan fokus
-                                    borderSide: BorderSide(
-                                        color: primaryColor), // Warna disamakan
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  // --- PERUBAHAN DI SINI: Sembunyikan errorText (tetap) ---
+                                      borderSide:
+                                          BorderSide(color: primaryColor),
+                                      borderRadius: BorderRadius.circular(10)),
                                   errorStyle:
                                       const TextStyle(height: 0, fontSize: 0),
-                                  // --- AKHIR PERUBAHAN ---
                                   suffixIcon: IconButton(
                                     icon: Icon(
-                                      _showConfirmPassword
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: primaryColor,
-                                    ),
+                                        _showConfirmPassword
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: primaryColor),
                                     onPressed: () {
                                       setState(() {
                                         _showConfirmPassword =
@@ -396,20 +403,16 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
                                   ),
                                 ),
                                 onChanged: (value) {
-                                  // Kosongkan error saat mengetik
                                   setState(() {
                                     _confirmPasswordError = '';
                                     _errorMessage = '';
                                   });
-                                  // Re-validate form when text changes to update button state
                                   _formKey.currentState?.validate();
                                 },
-                                // Validator untuk konfirmasi password bisa lebih sederhana, cek kecocokan saat submit
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return "Konfirmasi password tidak boleh kosong.";
                                   }
-                                  // Validasi kecocokan hanya jika password pertama tidak kosong dan valid secara format
                                   if (_passwordController.text.isNotEmpty &&
                                       _validatePassword(
                                               _passwordController.text) ==
@@ -420,48 +423,43 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
                                   return null;
                                 },
                               ),
-                              // Menampilkan pesan error khusus di bawah field
                               if (_confirmPasswordError.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    _confirmPasswordError,
-                                    style: TextStyle(
-                                        color: Colors.red[700], fontSize: 12.0),
-                                  ),
-                                ),
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(_confirmPasswordError,
+                                        style: TextStyle(
+                                            color: Colors.red[700],
+                                            fontSize: 12.0))),
                             ],
                           ),
                           const SizedBox(height: 30.0),
-
-                          // --- Tombol "Ubah Password" (Selalu Aktif) ---
                           SizedBox(
-                            width: double.infinity, // Lebar penuh
+                            width: double.infinity,
                             child: ElevatedButton(
                               onPressed:
-                                  _handleSubmit, // LANGSUNG PANGGIL _handleSubmit
+                                  isSubmitDisabled ? null : _handleSubmit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor.withOpacity(
-                                    0.9), // Warna selalu 90% opasitas
-                                foregroundColor: Colors.white, // Warna teks
-                                // disabledBackgroundColor dan disabledForegroundColor tidak diperlukan
+                                backgroundColor: primaryColor.withOpacity(0.9),
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor:
+                                    primaryColor.withOpacity(0.5),
+                                disabledForegroundColor:
+                                    Colors.white.withOpacity(0.5),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                                    borderRadius: BorderRadius.circular(10)),
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 15),
                               ),
-                              child: const Text(
-                                'Ubah Password',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: _isLoading
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white)
+                                  : const Text('Ubah Password',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold)),
                             ),
                           ),
-                          const SizedBox(
-                              height: 20.0), // Padding di bagian bawah
+                          const SizedBox(height: 20.0),
                         ],
                       ),
                     ),
@@ -470,70 +468,51 @@ class _NewPasswordScreenState extends State<NewPasswordScreen>
               ),
             ],
           ),
-
-          // --- Modal Berhasil (mengikuti desain ReactJS) dengan FadeTransition ---
           if (_showSuccessModal)
-            // Menggunakan FadeTransition untuk animasi opasitas
             FadeTransition(
               opacity: _fadeAnimation,
               child: Container(
-                color: Colors.black.withOpacity(0.5), // Background gelap
+                color: Colors.black.withOpacity(0.5),
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
                 alignment: Alignment.center,
                 child: AlertDialog(
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(20.0), // Sudut melengkung
-                  ),
+                      borderRadius: BorderRadius.circular(20.0)),
                   contentPadding: const EdgeInsets.all(24.0),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'BERHASIL',
-                        style: TextStyle(
-                          fontSize: 28.0,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                      Text('BERHASIL',
+                          style: TextStyle(
+                              fontSize: 28.0,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor),
+                          textAlign: TextAlign.center),
                       const SizedBox(height: 20),
-                      // Menggunakan ikon check_circle_outline sebagai pengganti SuccessIcon
-                      Icon(
-                        Icons.check_circle_outline,
-                        color: primaryColor,
-                        size: 100, // Sesuaikan ukuran ikon
-                      ),
+                      Icon(Icons.check_circle_outline,
+                          color: primaryColor, size: 100),
                       const SizedBox(height: 20),
                       const Text(
-                        'Selamat! Password Anda berhasil dibuat. Klik "Lanjutkan" untuk login.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16.0,
-                          color: Colors.black,
-                        ),
-                      ),
+                          'Selamat! Password Anda berhasil dibuat. Klik "Lanjutkan" untuk login.',
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(fontSize: 16.0, color: Colors.black)),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _handleSuccessModalContinue,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                primaryColor, // Warna tombol lanjutkan
+                            backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                                borderRadius: BorderRadius.circular(10)),
                             padding: const EdgeInsets.symmetric(vertical: 15),
                           ),
-                          child: const Text(
-                            'Lanjutkan',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
+                          child: const Text('Lanjutkan',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],

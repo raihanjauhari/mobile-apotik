@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart'; // Dipertahankan untuk ikon sosial media
 import 'package:flutter_svg/flutter_svg.dart'; // Untuk SVG logo
+import 'package:http/http.dart' as http; // <<< TAMBAHKAN INI UNTUK API CALL
+import 'dart:convert'; // <<< TAMBAHKAN INI UNTUK JSON ENCODE/DECODE
+import 'package:shared_preferences/shared_preferences.dart'; // <<< TAMBAHKAN INI UNTUK SIMPAN TOKEN/INFO USER
 
 // Asumsi file-file ini ada di proyek Anda
-// import '../theme/theme.dart'; // Dihapus karena warna didefinisikan langsung
 import '../widgets/custom_scaffold.dart'; // Widget CustomScaffold Anda
 import 'forget_password_screen.dart'; // Halaman ForgetPasswordScreen Anda
 
@@ -26,11 +28,12 @@ class _SignInScreenState extends State<SignInScreen> {
   bool rememberPassword = true;
   bool _obscureText = true; // Mengontrol visibilitas password
 
-  // --- STATE BARU SESUAI LOGIKA REACTJS ---
+  // --- STATE BARU SESUAI LOGIKA REACTJS DAN UNTUK API ---
   String _emailError = ''; // Error spesifik untuk field email
   String _passwordError = ''; // Error spesifik untuk field password
   String _globalMessage = ''; // Pesan global (sukses/error)
   bool _loginSuccess = false; // Status login sukses
+  bool _isAuthenticating = false; // Indikator loading saat autentikasi
   // --- AKHIR STATE BARU ---
 
   // Mendefinisikan warna heksadesimal sesuai dengan desain web
@@ -76,69 +79,114 @@ class _SignInScreenState extends State<SignInScreen> {
     return null; // Validasi sukses
   }
 
-  // Fungsi handle submit (sesuai logika ReactJS & hardcoded users)
-  void _handleSubmit() {
+  // Fungsi handle submit dengan API Login
+  Future<void> _handleSubmit() async {
     // Reset semua pesan error/sukses sebelum submit
     setState(() {
       _emailError = '';
       _passwordError = '';
       _globalMessage = '';
       _loginSuccess = false;
+      _isAuthenticating = true; // Aktifkan loading
     });
 
-    // Panggil validate() pada FormKey untuk menjalankan validator di semua TextFormField
-    // Meskipun tombol selalu aktif, validasi ini masih penting untuk menampilkan pesan global
-    if (_formSignInKey.currentState!.validate()) {
-      // Dapatkan nilai email dan password setelah validasi form dasar
-      final String email = _emailController.text.trim();
-      final String password = _passwordController.text.trim();
-
-      // Cek kredensial hardcoded
-      if (email == 'c030322048@gmail.com' && password == 'Admin123') {
-        setState(() {
-          _loginSuccess = true;
-          _globalMessage = "Login Berhasil! Mengarahkan ke Dashboard Admin...";
-        });
-        // Navigasi ke Dashboard Admin
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardAdmin()),
-        );
-      } else if (email == 'raihanfg565@gmail.com' && password == 'Petugas123') {
-        setState(() {
-          _loginSuccess = true;
-          _globalMessage =
-              "Login Berhasil! Mengarahkan ke Dashboard Petugas...";
-        });
-        // Navigasi ke Dashboard Petugas
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardPetugas()),
-        );
-      } else {
-        setState(() {
-          _loginSuccess = false;
-          _globalMessage = "Password salah.";
-        });
-      }
-    } else {
-      // Jika validasi form bawaan gagal, tampilkan pesan umum
+    // Panggil validate() pada FormKey
+    if (!_formSignInKey.currentState!.validate()) {
       setState(() {
         _globalMessage = "Mohon lengkapi semua data dengan benar.";
-        _loginSuccess = false; // Pastikan status sukses direset
+        _loginSuccess = false;
+        _isAuthenticating =
+            false; // Nonaktifkan loading jika validasi form gagal
+      });
+      return; // Hentikan proses jika form tidak valid
+    }
+
+    final String email = _emailController.text.trim();
+    final String password = _passwordController.text.trim();
+
+    // URL API Login Anda
+    final String apiUrl = "https://ti054b05.agussbn.my.id/api/auth/login";
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        // Login berhasil
+        final String token = responseData['token'];
+        final Map<String, dynamic> user = responseData['user'];
+        final String role = user['role']; // Asumsi role ada di objek user
+
+        // Simpan token dan info user di SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', token);
+        await prefs.setString('user_id', user['id_user']);
+        await prefs.setString('user_email', user['email']);
+        await prefs.setString('user_role', user['role']);
+        await prefs.setString(
+            'user_name', user['nama_user']); // Tambahan jika perlu
+
+        setState(() {
+          _loginSuccess = true;
+          _globalMessage = "Login Berhasil! Mengarahkan ke Dashboard...";
+        });
+
+        // Navigasi berdasarkan role
+        if (role == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardAdmin()),
+          );
+        } else if (role == 'petugas') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardPetugas()),
+          );
+        } else {
+          // Handle role lain atau default
+          setState(() {
+            _globalMessage =
+                "Login berhasil, namun role tidak dikenali. Silakan hubungi admin.";
+            _loginSuccess = false;
+          });
+        }
+      } else {
+        // Login gagal (status code bukan 200)
+        setState(() {
+          _loginSuccess = false;
+          _globalMessage =
+              responseData['error'] ?? "Email atau password salah.";
+        });
+        print("API Login Error: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      // Handle error jaringan atau lainnya
+      setState(() {
+        _globalMessage =
+            "Gagal terhubung ke server. Periksa koneksi internet Anda.";
+        _loginSuccess = false;
+      });
+      print("Network/API Call Error: $e");
+    } finally {
+      setState(() {
+        _isAuthenticating =
+            false; // Nonaktifkan loading terlepas dari sukses/gagal
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // isSubmitDisabled tidak lagi digunakan untuk `onPressed`, tapi bisa dipertahankan
-    // jika ingin menggunakannya untuk logika visual lain di masa depan.
-    // final bool isSubmitDisabled = _emailController.text.isEmpty ||
-    //     _passwordController.text.isEmpty ||
-    //     _validateEmail(_emailController.text) != null ||
-    //     _validatePassword(_passwordController.text) != null;
-
     return CustomScaffold(
       child: Column(
         children: [
@@ -278,13 +326,11 @@ class _SignInScreenState extends State<SignInScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               errorBorder: OutlineInputBorder(
-                                // Border saat ada error
                                 borderSide: const BorderSide(
                                     color: Colors.black12), // Warna disamakan
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedErrorBorder: OutlineInputBorder(
-                                // Border saat ada error dan fokus
                                 borderSide: BorderSide(
                                     color: primaryColor), // Warna disamakan
                                 borderRadius: BorderRadius.circular(10),
@@ -298,8 +344,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                 _emailError = '';
                                 _globalMessage = '';
                               });
-                              // Validasi tetap dipanggil untuk mengupdate status internal formKey
-                              _formSignInKey.currentState?.validate();
+                              _formSignInKey.currentState
+                                  ?.validate(); // Validasi untuk update formKey
                             },
                           ),
                         ],
@@ -344,13 +390,11 @@ class _SignInScreenState extends State<SignInScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               errorBorder: OutlineInputBorder(
-                                // Border saat ada error
                                 borderSide: const BorderSide(
                                     color: Colors.black12), // Warna disamakan
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedErrorBorder: OutlineInputBorder(
-                                // Border saat ada error dan fokus
                                 borderSide: BorderSide(
                                     color: primaryColor), // Warna disamakan
                                 borderRadius: BorderRadius.circular(10),
@@ -378,8 +422,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                 _passwordError = '';
                                 _globalMessage = '';
                               });
-                              // Validasi tetap dipanggil untuk mengupdate status internal formKey
-                              _formSignInKey.currentState?.validate();
+                              _formSignInKey.currentState
+                                  ?.validate(); // Validasi untuk update formKey
                             },
                           ),
                         ],
@@ -416,18 +460,21 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 25.0),
 
-                      // --- Tombol Login (Selalu Aktif) ---
+                      // --- Tombol Login ---
                       SizedBox(
                         width: double.infinity, // Lebar penuh
                         child: ElevatedButton(
-                          onPressed:
-                              _handleSubmit, // <--- LANGSUNG PANGGIL _handleSubmit
+                          onPressed: _isAuthenticating
+                              ? null
+                              : _handleSubmit, // Nonaktifkan saat loading
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor.withOpacity(
-                                0.9), // Tombol selalu tampil dengan opasitas 90%
+                            backgroundColor:
+                                primaryColor.withOpacity(0.9), // Warna tombol
                             foregroundColor: Colors.white, // Warna teks tombol
-                            // disabledBackgroundColor dan disabledForegroundColor tidak diperlukan lagi
-                            // karena tombol selalu aktif
+                            disabledBackgroundColor: primaryColor
+                                .withOpacity(0.5), // Warna saat disabled
+                            disabledForegroundColor: Colors.white
+                                .withOpacity(0.5), // Warna teks saat disabled
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                   10), // Sudut tombol melengkung
@@ -435,13 +482,16 @@ class _SignInScreenState extends State<SignInScreen> {
                             padding: const EdgeInsets.symmetric(
                                 vertical: 15), // Padding vertikal tombol
                           ),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isAuthenticating
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white) // Tampilkan loading
+                              : const Text(
+                                  'Login',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 25.0),
@@ -450,7 +500,6 @@ class _SignInScreenState extends State<SignInScreen> {
                       Align(
                         alignment: Alignment.center,
                         child: Row(
-                          // Menggunakan Row untuk memisahkan teks
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
@@ -461,7 +510,6 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                             ),
                             GestureDetector(
-                              // GestureDetector hanya membungkus "Klik disini"
                               onTap: () {
                                 Navigator.push(
                                   context,

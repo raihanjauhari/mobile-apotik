@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-// Header dan Inti (menu) akan diganti, jadi tidak perlu import lagi CustomHeader
-import 'package:login_signup/widgets/menu.dart'; // Pastikan CustomBottomNavBar Anda ada
-import 'package:login_signup/screens/signin_screen.dart'; // Untuk navigasi Signin
+import 'package:login_signup/widgets/menu.dart'; // Import CustomBottomNavBar
+import 'package:login_signup/screens/signin_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <<< TAMBAHKAN INI
 
-// Import halaman-halaman utama lainnya untuk navigasi BottomNavBar
+// Import halaman-halaman admin lainnya untuk navigasi BottomNavBar
 import 'package:login_signup/pages/admin/dashboard_admin.dart'; // Mengarah ke DashboardAdmin
-import 'package:login_signup/pages/admin/eresep.dart'; // Untuk EresepAdminPage
-import 'package:login_signup/pages/admin/obat.dart'; // Untuk ObatAdminPage
+import 'package:login_signup/pages/admin/eresep.dart';
+import 'package:login_signup/pages/admin/obat.dart';
 
 class AkunAdminPage extends StatefulWidget {
   const AkunAdminPage({super.key});
@@ -16,31 +16,27 @@ class AkunAdminPage extends StatefulWidget {
 }
 
 class _AkunAdminPageState extends State<AkunAdminPage> {
-  // --- Colors (Salin dari DashboardPetugas agar konsisten) ---
   final Color primaryColor = const Color(0xFF2A4D69);
-  final Color secondaryColor = const Color(0xFF6B8FB4);
-  final Color accentColor =
-      const Color(0xFFF0F4F8); // Warna latar belakang terang
+  final Color secondaryColor =
+      const Color(0xFF6B8FB4); // Menambahkan secondaryColor
+  final Color accentColor = const Color(0xFFF0F4F8);
   final Color redColor =
       const Color(0xFFD32F2F); // Warna merah untuk tombol logout
 
-  // --- Mock Data Pengguna untuk Admin ---
-  final Map<String, dynamic> _userData = {
-    "id_user": "U002",
-    "email": "c030322048@mahasiswa.poliban.ac.id",
-    "password": "", // Password tidak ditampilkan
-    "nama_user": "Ibu Jumbo",
-    "role": "admin",
-    "foto_user": "IbuJumbo.png", // Nama file gambar profil (akan diabaikan)
-  };
-
-  // --- UI State Variables ---
   int _selectedIndex =
-      3; // Default selected index untuk AkunAdminPage adalah 3 (asumsi: 0:Dashboard, 1:E-Resep, 2:Obat, 3:Akun, 4:Keluar)
+      3; // Index untuk Akun di BottomNavBar (0:Dashboard, 1:E-Resep, 2:Obat, 3:Akun, 4:Keluar)
+
+  // --- Data Pengguna yang akan dimuat dari SharedPreferences ---
+  String? _userId;
+  String? _userEmail;
+  String? _userName;
+  String? _userRole;
+  String? _userPhoto; // Akan menjadi nama file foto saja, misal "jumbo.jpeg"
 
   @override
   void initState() {
     super.initState();
+    _loadUserData(); // Panggil fungsi untuk memuat data pengguna saat inisialisasi
   }
 
   @override
@@ -49,6 +45,21 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
   }
 
   // --- Methods ---
+
+  /// Fungsi untuk memuat data pengguna dari SharedPreferences
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userId = prefs.getString('user_id');
+      _userEmail = prefs.getString('user_email');
+      _userName = prefs.getString('user_name');
+      _userRole = prefs.getString('user_role');
+      _userPhoto =
+          prefs.getString('user_photo'); // Asumsi Anda menyimpan ini saat login
+    });
+    // Optional: Fetch more detailed data from API if needed, using _userId
+    // Example: _fetchDetailedUserData(_userId!);
+  }
 
   /// Shows a simple modal dialog with a title and content.
   void _showSimpleModal(String title, String content) {
@@ -102,6 +113,10 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
     );
 
     if (confirm == true) {
+      // Hapus semua data dari SharedPreferences saat logout
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Menghapus semua data yang disimpan
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -111,7 +126,6 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
   }
 
   // --- Widget Builders ---
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,7 +163,7 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
           } else if (index == 3) {
             print("Sudah di halaman Akun Admin.");
           } else if (index == 4) {
-            _confirmLogout();
+            _confirmLogout(); // Panggil fungsi logout
           }
         },
         selectedItemColor: primaryColor,
@@ -160,8 +174,13 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
   }
 
   Widget _buildProfileHeader() {
+    // URL dasar untuk gambar profil
+    // Sesuaikan ini jika domain atau path "/images/user/" berubah
+    final String baseImageUrl = "https://ti054b05.agussbn.my.id/images/user/";
+    final String fullImageUrl =
+        _userPhoto != null ? '$baseImageUrl$_userPhoto' : '';
+
     return Container(
-      // Menggunakan Container dengan BorderRadius langsung
       width: double.infinity,
       height: 200, // TINGGI HEADER disesuaikan menjadi 200
       decoration: BoxDecoration(
@@ -199,9 +218,15 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
                     CircleAvatar(
                       radius: 40, // Mengurangi radius avatar
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.person,
-                          size: 45,
-                          color: primaryColor), // Warna ikon disesuaikan
+                      // Jika _userPhoto tersedia dan bukan kosong, tampilkan NetworkImage
+                      // Jika tidak, tampilkan ikon default
+                      backgroundImage: (_userPhoto != null &&
+                              _userPhoto!.isNotEmpty)
+                          ? NetworkImage(fullImageUrl) as ImageProvider<Object>?
+                          : null,
+                      child: (_userPhoto == null || _userPhoto!.isEmpty)
+                          ? Icon(Icons.person, size: 45, color: primaryColor)
+                          : null, // Jika ada gambar, jangan tampilkan ikon
                     ),
                     Positioned(
                       right: 0,
@@ -209,19 +234,15 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
                       child: CircleAvatar(
                         radius: 15, // Ukuran lingkaran edit
                         backgroundColor: primaryColor,
-                        child: Icon(
-                            // Ikon edit langsung, bukan IconButton di dalam CircleAvatar
-                            Icons.edit,
-                            color: Colors.white,
-                            size: 15 // Ukuran ikon edit
-                            ),
+                        child: Icon(Icons.edit,
+                            color: Colors.white, size: 15), // Ukuran ikon edit
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8), // Mengurangi spasi
                 Text(
-                  _userData['nama_user'] ?? 'Nama Pengguna',
+                  _userName ?? 'Nama Admin', // Tampilkan nama dari state
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16, // Mengurangi ukuran font nama
@@ -229,7 +250,8 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
                   ),
                 ),
                 Text(
-                  _userData['email'] ?? 'email@example.com',
+                  _userEmail ??
+                      'admin@example.com', // Tampilkan email dari state
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11, // Mengurangi ukuran font email
@@ -252,9 +274,11 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
             _showSimpleModal('Profil', 'Detail profil pribadi Anda.');
           }),
           _buildMenuItem(Icons.favorite_border, 'Favorit', () {
+            // Ditambahkan kembali
             _showSimpleModal('Favorit', 'Daftar item favorit Anda.');
           }),
           _buildMenuItem(Icons.payment, 'Metode Pembayaran', () {
+            // Ditambahkan kembali
             _showSimpleModal(
                 'Metode Pembayaran', 'Kelola metode pembayaran Anda.');
           }),
@@ -281,7 +305,6 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
     return Column(
       children: [
         Card(
-          // Menggunakan Card untuk setiap ListTile agar ada elevasi dan rounded corner
           elevation: 1, // Elevasi minimal
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10), // Sudut melengkung
@@ -300,7 +323,6 @@ class _AkunAdminPageState extends State<AkunAdminPage> {
                 ? null
                 : Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
             onTap: onTap,
-            // tileColor: Colors.white, // Tidak perlu tileColor jika pakai Card
           ),
         ),
         const SizedBox(height: 10), // Spasi antar item menu

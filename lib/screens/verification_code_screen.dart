@@ -1,5 +1,9 @@
+// lib/screens/verification_code_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // Digunakan untuk SVG logo
+import 'package:http/http.dart' as http; // Import package http
+import 'dart:convert'; // Import untuk menggunakan json.decode dan json.encode
+import 'package:shared_preferences/shared_preferences.dart'; // Untuk menyimpan userId sementara
 
 // Asumsi file-file ini ada di proyek Anda
 import 'package:login_signup/widgets/custom_scaffold.dart'; // Widget CustomScaffold Anda
@@ -30,6 +34,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
   final Color blackTextColor = const Color(0xFF000000); // Warna hitam murni
 
   String _errorMessage = ''; // State untuk menampilkan pesan error
+  bool _isLoading = false; // State untuk indikator loading
 
   @override
   void initState() {
@@ -55,8 +60,6 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
         // Hapus pesan error saat pengguna mulai mengetik lagi atau kotak terisi/kosong
         setState(() {
           _errorMessage = '';
-          // Ini penting untuk merebuild widget dan mengevaluasi ulang isSubmitDisabled
-          // Ini akan dipanggil setiap kali ada perubahan teks di setiap controller.
         });
       });
     }
@@ -74,13 +77,13 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     super.dispose();
   }
 
-  // Fungsi untuk memverifikasi kode OTP (mengikuti logika ReactJS yang Anda berikan)
+  // Fungsi untuk memverifikasi kode OTP dengan API
   Future<void> _verifyOtp() async {
     final String otpCode = _otpControllers
         .map((c) => c.text.trim())
-        .join(); // Gabungkan semua digit
+        .join(); // Gabungkan semua digit menjadi satu string
 
-    // Validasi panjang kode
+    // Validasi panjang kode di sisi klien
     if (otpCode.length != 6) {
       setState(() {
         _errorMessage = "Kode verifikasi harus 6 digit.";
@@ -89,34 +92,92 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     }
 
     setState(() {
-      _errorMessage = ''; // Reset error sebelum validasi/request
+      _errorMessage = ''; // Reset error sebelum request
+      _isLoading = true; // Aktifkan loading
     });
 
-    // --- Logika Verifikasi (Simulasi Sesuai Permintaan Anda: 555555 adalah benar) ---
-    if (otpCode == "555555") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kode verifikasi berhasil!')),
+    // URL API yang di-deploy
+    final String apiUrl =
+        "https://ti054b05.agussbn.my.id/api/user/verify-reset-code";
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'email': widget
+              .email, // Gunakan email yang diterima dari halaman sebelumnya
+          'code': otpCode, // Kirim kode OTP yang dimasukkan pengguna
+        }),
       );
-      // Navigasi ke halaman buat password baru setelah verifikasi sukses
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const NewPasswordScreen()),
-      );
-    } else {
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        // Pastikan user_id tidak null atau kosong dari respons API backend
+        final String? userId = responseData['user_id'];
+        if (userId == null || userId.isEmpty) {
+          setState(() {
+            _errorMessage =
+                "Respons API tidak memiliki User ID yang valid. Coba kirim ulang kode.";
+          });
+          print(
+              "API Error: User ID is null or empty in response. Full response: ${response.body}");
+          return; // Hentikan proses jika userId tidak valid
+        }
+
+        // Simpan userId dan email di SharedPreferences untuk digunakan di halaman selanjutnya
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('current_reset_user_id', userId);
+        await prefs.setString(
+            'current_reset_email', widget.email); // Simpan email juga
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(responseData['message'] ?? 'Kode verifikasi berhasil!')),
+        );
+        // Navigasi ke halaman buat password baru setelah verifikasi sukses
+        // Gunakan pushReplacement agar pengguna tidak bisa kembali ke halaman verifikasi kode
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NewPasswordScreen()),
+        );
+      } else {
+        // Jika status code bukan 200 (misal 400, 401, 404, 500)
+        final errorData = json.decode(response.body);
+        setState(() {
+          // Ambil pesan error dari respons API, jika tidak ada, gunakan pesan default
+          _errorMessage = errorData['error'] ??
+              "Kode verifikasi salah atau sudah kadaluarsa.";
+        });
+        print("API Error: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      // Handle network errors (e.g., no internet, server not reachable)
       setState(() {
-        _errorMessage = "Kode verifikasi salah atau sudah kadaluarsa.";
+        _errorMessage =
+            "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
+      });
+      print("Network/API Call Error: $e");
+    } finally {
+      setState(() {
+        _isLoading = false; // Nonaktifkan loading terlepas dari sukses/gagal
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Tombol "Kirim" akan nonaktif jika ada kotak OTP yang masih kosong
+    // Tombol "Kirim" akan nonaktif jika ada kotak OTP yang masih kosong atau sedang loading
+    // atau jika _isLoading adalah true
     final bool isSubmitDisabled =
-        _otpControllers.any((controller) => controller.text.isEmpty);
+        _otpControllers.any((controller) => controller.text.isEmpty) ||
+            _isLoading;
 
     return CustomScaffold(
-      // Asumsi CustomScaffold ini menyediakan dasar layout
       child: Column(
         children: [
           const Expanded(
@@ -235,8 +296,10 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                               ),
                             ),
                             onChanged: (value) {
-                              setState(
-                                  () {}); // Panggil setState agar isSubmitDisabled dievaluasi ulang
+                              setState(() {
+                                // Panggil setState agar isSubmitDisabled dievaluasi ulang
+                                // dan pesan error hilang saat mulai mengetik
+                              });
                             },
                           ),
                         ),
@@ -265,7 +328,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                       child: ElevatedButton(
                         onPressed: isSubmitDisabled
                             ? null
-                            : _verifyOtp, // Nonaktif jika kode belum lengkap
+                            : _verifyOtp, // Nonaktif jika kode belum lengkap atau sedang loading
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor
                               .withOpacity(0.9), // Warna saat aktif (90%)
@@ -282,13 +345,17 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                           padding: const EdgeInsets.symmetric(
                               vertical: 15), // Padding vertikal tombol
                         ),
-                        child: const Text(
-                          'Kirim',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color:
+                                    Colors.white) // Tampilkan loading spinner
+                            : const Text(
+                                'Kirim',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 25.0), // Jarak di bawah tombol
