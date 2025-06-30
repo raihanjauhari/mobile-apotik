@@ -3,6 +3,8 @@ import 'package:intl/intl.dart'; // Untuk format mata uang
 import 'package:login_signup/widgets/header.dart';
 import 'package:login_signup/widgets/menu.dart';
 import 'package:login_signup/screens/signin_screen.dart';
+import 'package:http/http.dart' as http; // Import for HTTP requests
+import 'dart:convert'; // Import for JSON decoding
 
 // Import halaman-halaman utama lainnya untuk navigasi BottomNavBar
 import 'package:login_signup/pages/petugas/dashboard_petugas.dart';
@@ -24,129 +26,9 @@ class _ObatPageState extends State<ObatPage> {
       const Color(0xFFF0F4F8); // Warna latar belakang terang
   final Color greenAccent = const Color(0xFF8BC34A); // Warna hijau untuk "All"
 
-  // --- Mock Data Obat ---
-  List<Map<String, dynamic>> _mockObatList = [
-    {
-      "kode_obat": "OBT001",
-      "nama_obat": "Paracetamol 500mg",
-      "stok": 150,
-      "harga_satuan": 6000,
-      "deskripsi": "Obat pereda nyeri dan demam.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT002",
-      "nama_obat": "Amoxicillin 250mg",
-      "stok": 80,
-      "harga_satuan": 3000,
-      "deskripsi": "Antibiotik untuk infeksi bakteri.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT003",
-      "nama_obat": "Vitamin C 1000mg",
-      "stok": 200,
-      "harga_satuan": 75000,
-      "deskripsi": "Suplemen untuk daya tahan tubuh.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT004",
-      "nama_obat": "Ibuprofen 250mg",
-      "stok": 0, // Stok Habis
-      "harga_satuan": 12000,
-      "deskripsi": "Obat anti-inflamasi non-steroid.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT005",
-      "nama_obat": "Dexamethasone 0.5mg",
-      "stok": 120,
-      "harga_satuan": 1000,
-      "deskripsi": "Obat kortikosteroid untuk alergi dan radang.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT006",
-      "nama_obat": "Lansoprazole 30 mg",
-      "stok": 90,
-      "harga_satuan": 15000,
-      "deskripsi": "Obat untuk meredakan gejala asam lambung.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT007",
-      "nama_obat": "Betadine Solution",
-      "stok": 50,
-      "harga_satuan": 8000,
-      "deskripsi": "Antiseptik untuk luka.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT008",
-      "nama_obat": "Counterpain Cream",
-      "stok": 0, // Stok Habis
-      "harga_satuan": 12000,
-      "deskripsi": "Krim pereda nyeri otot.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT009",
-      "nama_obat": "Diapet",
-      "stok": 75,
-      "harga_satuan": 1500,
-      "deskripsi": "Obat diare herbal.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT010",
-      "nama_obat": "Bodrex Migra",
-      "stok": 110,
-      "harga_satuan": 1800,
-      "deskripsi": "Obat untuk sakit kepala migrain.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT011",
-      "nama_obat": "Promag",
-      "stok": 0, // Stok Habis
-      "harga_satuan": 1200,
-      "deskripsi": "Obat sakit maag.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT012",
-      "nama_obat": "Biogesic",
-      "stok": 130,
-      "harga_satuan": 1400,
-      "deskripsi": "Paracetamol merek lain.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT013",
-      "nama_obat": "Sanmol",
-      "stok": 95,
-      "harga_satuan": 1600,
-      "deskripsi": "Obat penurun panas dan pereda nyeri.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT014",
-      "nama_obat": "OBH Combi",
-      "stok": 60,
-      "harga_satuan": 7000,
-      "deskripsi": "Obat batuk berdahak dan pilek.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-    {
-      "kode_obat": "OBT015",
-      "nama_obat": "FreshCare Roll On",
-      "stok": 25,
-      "harga_satuan": 9500,
-      "deskripsi": "Minyak angin aroma terapi.",
-      // "location": "Banjarmasin" // LOKASI DIHAPUS DARI DATA MOCK
-    },
-  ];
+  // --- Data Obat (akan diisi dari API) ---
+  List<Map<String, dynamic>> _obatList = []; // Changed from _mockObatList
+  bool _isLoading = true; // Added loading state
 
   // --- Filter and Search State ---
   String _statusFilter = "Semua"; // Mengubah default menjadi "Semua"
@@ -169,6 +51,7 @@ class _ObatPageState extends State<ObatPage> {
         });
       }
     });
+    _fetchObatData(); // Fetch data from API on init
   }
 
   @override
@@ -177,7 +60,38 @@ class _ObatPageState extends State<ObatPage> {
     super.dispose();
   }
 
-  // --- Methods ---
+  // --- API Methods ---
+  Future<void> _fetchObatData() async {
+    setState(() {
+      _isLoading = true; // Set loading to true when fetching starts
+    });
+    try {
+      final response =
+          await http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/obat'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _obatList = data.cast<Map<String, dynamic>>();
+        });
+      } else {
+        // Handle server error or non-200 status code
+        _showSimpleModal(
+            'Error', 'Gagal memuat data obat: ${response.statusCode}');
+        _obatList = []; // Clear list on error
+      }
+    } catch (e) {
+      // Handle network or parsing error
+      _showSimpleModal('Error', 'Terjadi kesalahan jaringan: $e');
+      _obatList = []; // Clear list on error
+    } finally {
+      setState(() {
+        _isLoading = false; // Set loading to false when fetching is complete
+      });
+    }
+  }
+
+  // --- General Methods ---
 
   /// Shows a simple modal dialog with a title and content.
   void _showSimpleModal(String title, String content) {
@@ -203,11 +117,11 @@ class _ObatPageState extends State<ObatPage> {
 
   /// Filters and sorts the medicine list based on current filters and search.
   List<Map<String, dynamic>> get _filteredData {
-    List<Map<String, dynamic>> data = List.from(_mockObatList);
+    List<Map<String, dynamic>> data = List.from(_obatList); // Use _obatList
 
     // 1. Filter by status (Semua, Stok Habis)
     if (_statusFilter == "Stok Habis") {
-      data = data.where((obat) => obat['stok'] == 0).toList();
+      data = data.where((obat) => (obat['stok'] ?? 0) == 0).toList();
     } // Jika _statusFilter adalah "Semua", tidak ada filter tambahan
 
     // 2. Filter by search text (using the header's search controller text)
@@ -283,7 +197,7 @@ class _ObatPageState extends State<ObatPage> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: Image.asset(
-                        '../../assets/images/obat.jpg', // Placeholder image
+                        'assets/images/obat.jpg', // Placeholder image - path updated
                         width: 150,
                         height: 150,
                         fit: BoxFit.cover,
@@ -306,7 +220,7 @@ class _ObatPageState extends State<ObatPage> {
                       "Stok Tersedia",
                       obat['stok'] != null ? '${obat['stok']} Unit' : '-',
                       Icons.inventory,
-                      valueColor: obat['stok'] == 0 ? Colors.red : null),
+                      valueColor: (obat['stok'] ?? 0) == 0 ? Colors.red : null),
                   _buildDetailRow("Lokasi", "Banjarmasin",
                       Icons.location_on), // Hardcoded location
                   const SizedBox(height: 20),
@@ -448,71 +362,79 @@ class _ObatPageState extends State<ObatPage> {
         },
         searchHintText: 'Cari Obat di sini...',
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Obat',
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor),
-                      ),
-                      const SizedBox(height: 16),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: primaryColor,
+              ),
+            )
+          : CustomScrollView(
+              slivers: [
+                SliverList(
+                  delegate: SliverChildListDelegate(
+                    [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Obat',
+                              style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor),
+                            ),
+                            const SizedBox(height: 16),
 
-                      // Banner "Track your meds!"
-                      _buildTrackYourMedsBanner(),
-                      const SizedBox(height: 24),
+                            // Banner "Track your meds!"
+                            _buildTrackYourMedsBanner(),
+                            const SizedBox(height: 24),
 
-                      // Filter Status Buttons (Semua, Stok Habis)
-                      _buildFilterStatusButtons(),
-                      const SizedBox(height: 24),
+                            // Filter Status Buttons (Semua, Stok Habis)
+                            _buildFilterStatusButtons(),
+                            const SizedBox(height: 24),
 
-                      // Medicine List Cards in a Grid
-                      _buildMedicineGridCards(displayedData),
+                            // Medicine List Cards in a Grid
+                            _buildMedicineGridCards(displayedData),
 
-                      // "Lihat Semua" button if more data
-                      if (_filteredData.length >
-                          4) // Sesuaikan dengan 4 item awal
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showAll = !_showAll;
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                            // "Lihat Semua" button if more data
+                            if (_filteredData.length >
+                                4) // Sesuaikan dengan 4 item awal
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16.0),
+                                child: Center(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _showAll = !_showAll;
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text(_showAll
+                                        ? "Sembunyikan"
+                                        : "Lihat Semua"),
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                                  _showAll ? "Sembunyikan" : "Lihat Semua"),
-                            ),
-                          ),
+                            const SizedBox(height: 50), // Spasi di bagian bawah
+                          ],
                         ),
-                      const SizedBox(height: 50), // Spasi di bagian bawah
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -560,7 +482,7 @@ class _ObatPageState extends State<ObatPage> {
         borderRadius: BorderRadius.circular(12),
         image: const DecorationImage(
           image: AssetImage(
-              '../../assets/images/banner_bg.png'), // Path relatif diperbarui
+              'assets/images/banner_bg.png'), // Path relatif diperbarui
           fit: BoxFit.cover,
           colorFilter: ColorFilter.mode(Colors.black38, BlendMode.darken),
         ),
@@ -661,7 +583,8 @@ class _ObatPageState extends State<ObatPage> {
   }
 
   Widget _buildMedicineGridCards(List<Map<String, dynamic>> data) {
-    if (data.isEmpty) {
+    if (data.isEmpty && !_isLoading) {
+      // Check if not loading to show "no data" message
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24.0),
@@ -714,12 +637,12 @@ class _ObatPageState extends State<ObatPage> {
                     ),
                     child: Center(
                       child: Image.asset(
-                        '../../assets/images/obat.jpg', // LANGSUNG MENGGUNAKAN OBAT.JPG
+                        'assets/images/obat.jpg', // LANGSUNG MENGGUNAKAN OBAT.JPG - path updated
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           // Debugging gambar: Cetak path aset yang dicoba dimuat
                           debugPrint(
-                              'ERROR: Gagal memuat aset gambar: ../../assets/images/obat.jpg');
+                              'ERROR: Gagal memuat aset gambar: assets/images/obat.jpg');
                           return const Icon(
                               Icons
                                   .broken_image, // Ikon jika gambar gagal dimuat
@@ -752,7 +675,7 @@ class _ObatPageState extends State<ObatPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Rp. ${NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0).format(obat['harga_satuan'])}',
+                          'Rp. ${NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0).format(obat['harga_satuan'] ?? 0)}',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

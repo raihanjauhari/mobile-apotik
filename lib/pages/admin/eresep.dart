@@ -3,6 +3,8 @@ import 'package:login_signup/widgets/header.dart'; // Import CustomHeader
 import 'package:login_signup/widgets/menu.dart'; // Import CustomBottomNavBar
 import 'package:login_signup/screens/signin_screen.dart';
 import 'package:intl/intl.dart'; // Import for currency formatting
+import 'package:http/http.dart' as http; // Import for HTTP requests
+import 'dart:convert'; // For JSON encoding/decoding
 
 // Import halaman-halaman admin lainnya untuk navigasi BottomNavBar
 import 'package:login_signup/pages/admin/dashboard_admin.dart';
@@ -22,135 +24,11 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
   final Color secondaryColor = const Color(0xFF6B8FB4);
   final Color accentColor = const Color(0xFFF0F4F8); // Light background color
 
-  // --- Mock Data (Copied from EresepPage for consistency) ---
-  List<Map<String, dynamic>> _mockResepList = [
-    {
-      "id_pendaftaran": "PD001",
-      "nama_pasien": "Anisa Aulya",
-      "nama_dokter": "dr. Lestari Wardhani",
-      "status": "Diproses", // This will appear as "Antrian E-Resep"
-      "tanggal_resep": "2024-05-20",
-      "detail_resep": {
-        "id_resep": "ER001",
-        "poli": "Umum",
-        "umur": "28 Tahun",
-        "beratBadan": "60 Kg",
-        "diagnosa": "Influenza",
-        "keterangan": "Istirahat cukup, hindari makanan pedas.",
-        "daftarObat": [
-          {
-            "nama_obat": "Paracetamol 500mg",
-            "aturan_pakai": "3x sehari 1 tablet",
-            "kuantitas": 10,
-            "harga_satuan": 2000
-          },
-          {
-            "nama_obat": "Amoxicillin 250mg",
-            "aturan_pakai": "3x sehari 1 kapsul",
-            "kuantitas": 7,
-            "harga_satuan": 3000
-          },
-        ],
-        "catatan": "Resep untuk flu biasa.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD002",
-      "nama_pasien": "Setya Adjie",
-      "nama_dokter": "dr. Dewa Mahendra",
-      "status": "Menunggu Pembayaran",
-      "tanggal_resep": "2024-05-21",
-      "detail_resep": {
-        "id_resep": "ER002",
-        "poli": "Anak",
-        "umur": "5 Tahun",
-        "beratBadan": "20 Kg",
-        "diagnosa": "Demam Tinggi",
-        "keterangan": "Pantau suhu tubuh anak.",
-        "daftarObat": [
-          {
-            "nama_obat": "Tempra Sirup",
-            "aturan_pakai": "3x sehari 5ml",
-            "kuantitas": 1,
-            "harga_satuan": 35000
-          },
-        ],
-        "catatan": "Berikan sesuai dosis anak.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD003",
-      "nama_pasien": "Hairul Azmi",
-      "nama_dokter": "dr. Intan Prameswari",
-      "status": "Sudah Bayar", // This will appear as "Menunggu Panggilan"
-      "tanggal_resep": "2024-05-19",
-      "detail_resep": {
-        "id_resep": "ER003",
-        "poli": "Gigi",
-        "umur": "35 Tahun",
-        "beratBadan": "75 Kg",
-        "diagnosa": "Sakit Gigi",
-        "keterangan": "Jaga kebersihan gigi.",
-        "daftarObat": [
-          {
-            "nama_obat": "Mefenamic Acid",
-            "aturan_pakai": "2x sehari 1 tablet",
-            "kuantitas": 5,
-            "harga_satuan": 1500
-          },
-        ],
-        "catatan": "Minum setelah makan.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD004",
-      "nama_pasien": "Budi Santoso",
-      "nama_dokter": "dr. Ahmad Subardjo",
-      "status": "Selesai",
-      "tanggal_resep": "2024-05-18",
-      "detail_resep": {
-        "id_resep": "ER004",
-        "poli": "Umum",
-        "umur": "40 Tahun",
-        "beratBadan": "70 Kg",
-        "diagnosa": "Flu",
-        "keterangan": "Banyak minum air putih.",
-        "daftarObat": [
-          {
-            "nama_obat": "Bodrex",
-            "aturan_pakai": "3x sehari 1 tablet",
-            "kuantitas": 10,
-            "harga_satuan": 1000
-          },
-        ],
-        "catatan": "Istirahat yang cukup.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD005",
-      "nama_pasien": "Mabel Pines",
-      "nama_dokter": "Dr. Atta",
-      "status": "Menunggu Pembayaran",
-      "tanggal_resep": "2025-05-05",
-      "detail_resep": {
-        "id_resep": "ER005",
-        "poli": "Poli KIA",
-        "umur": "34",
-        "beratBadan": "58.7",
-        "diagnosa": "Alergi Musim",
-        "keterangan": "Gunakan sabun muka khusus.",
-        "daftarObat": [
-          {
-            "nama_obat": "Amoxicillin",
-            "aturan_pakai": "3x sehari setelah makan",
-            "kuantitas": 8,
-            "harga_satuan": 15000
-          },
-        ],
-        "catatan": "Obat alergi musim",
-      },
-    },
-  ];
+  // --- Data from API (will replace mock data) ---
+  List<Map<String, dynamic>> _resepList =
+      []; // This will hold the combined data
+  bool _isLoadingData = false; // To show loading indicator
+  String? _apiErrorMessage; // To display API errors
 
   // --- Filter and Sort State ---
   String _statusFilter = "Semua"; // Currently active filter
@@ -158,23 +36,21 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
   bool _showAll = false; // To show all items if there are more than 12
 
   final List<String> _categoryOptions = [
-    "Semua", // Pindahkan "Semua" ke awal
+    "Semua",
     "Antrian E-Resep",
     "Menunggu Pembayaran",
     "Menunggu Panggilan",
     "Selesai",
   ];
 
-  // Map for converting from button status (display name) to internal data status
   final Map<String, String> _statusFilterMap = {
-    "Antrian E-Resep": "Diproses",
+    "Antrian E-Resep": "Diproses", // Mapping UI display to actual data status
     "Menunggu Pembayaran": "Menunggu Pembayaran",
     "Menunggu Panggilan": "Sudah Bayar",
     "Selesai": "Selesai",
-    "Semua": "Semua", // "Semua" status doesn't need conversion, used directly
+    "Semua": "Semua",
   };
 
-  // Map for converting from internal data status to UI display
   final Map<String, String> _statusDisplayMap = {
     "Diproses": "Antrian E-Resep",
     "Menunggu Pembayaran": "Menunggu Pembayaran",
@@ -182,7 +58,6 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
     "Selesai": "Selesai",
   };
 
-  // Priority map for sorting (still maintained for default sorting)
   final Map<String, int> _statusPriority = {
     "Diproses": 1, // Highest priority for "Antrian E-Resep"
     "Menunggu Pembayaran": 2,
@@ -204,13 +79,10 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
       if (_headerSearchController.text != _searchText) {
         setState(() {
           _searchText = _headerSearchController.text;
-          _filterAndSortResep();
         });
       }
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _filterAndSortResep(); // Initial filter and sort on load
-    });
+    _fetchEresepData(); // Initial data fetch from API
   }
 
   @override
@@ -234,14 +106,14 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
+          title: Text(title, style: TextStyle(color: primaryColor)),
           content: Text(content),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Tutup'),
+              child: Text('Tutup', style: TextStyle(color: primaryColor)),
             ),
           ],
         );
@@ -249,17 +121,139 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
     );
   }
 
-  /// Triggers a re-calculation of filtered and sorted data and refreshes the UI.
-  void _filterAndSortResep() {
+  /// Fetches and combines e-resep data from multiple APIs.
+  Future<void> _fetchEresepData() async {
     setState(() {
-      // The getter _filteredAndSortedData will be re-calculated automatically
-      // when _searchText or _statusFilter changes.
+      _isLoadingData = true;
+      _apiErrorMessage = null;
     });
+
+    try {
+      // Fetch all necessary data concurrently
+      final responses = await Future.wait([
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/eresep')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/pasien')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/dokter')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/dilayani')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/memunculkan')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/obat')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/detail_eresep')),
+      ]);
+
+      // Check all responses for success
+      for (var res in responses) {
+        if (res.statusCode != 200) {
+          throw Exception(
+              'Failed to load data from API: ${res.request?.url.path} (Status: ${res.statusCode})');
+        }
+      }
+
+      // Decode JSON data
+      final List<dynamic> eresepData = json.decode(responses[0].body);
+      final List<dynamic> pasienData = json.decode(responses[1].body);
+      final List<dynamic> dokterData = json.decode(responses[2].body);
+      final List<dynamic> dilayaniData = json.decode(responses[3].body);
+      final List<dynamic> memunculkanData = json.decode(responses[4].body);
+      final List<dynamic> obatData = json.decode(responses[5].body);
+      final List<dynamic> detailEresepData = json.decode(responses[6].body);
+
+      // Create maps for faster lookup
+      final Map<String, dynamic> pasienMap = {
+        for (var p in pasienData) p['id_pendaftaran']: p
+      };
+      final Map<String, dynamic> dokterMap = {
+        for (var d in dokterData) d['id_dokter'].toString(): d
+      }; // Ensure ID is string
+      final Map<String, dynamic> dilayaniMap = {
+        for (var d in dilayaniData) d['id_pendaftaran']: d
+      };
+      final Map<String, dynamic> detailEresepMap = {
+        for (var d in detailEresepData) d['id_eresep']: d
+      };
+      final Map<String, dynamic> obatMap = {
+        for (var o in obatData) o['kode_obat']: o
+      };
+
+      List<Map<String, dynamic>> combinedResepList = [];
+
+      for (var resep in eresepData) {
+        final String idResep = resep['id_eresep'];
+        final String idPendaftaran = resep['id_pendaftaran'];
+
+        final pasien = pasienMap[idPendaftaran];
+        final dilayani = dilayaniMap[idPendaftaran];
+        final dokter = dilayani != null
+            ? dokterMap[dilayani['id_dokter'].toString()]
+            : null; // Convert id_dokter to string
+        final detailResep = detailEresepMap[idResep];
+
+        List<Map<String, dynamic>> daftarObat = [];
+        final filteredMemunculkan =
+            memunculkanData.where((m) => m['id_eresep'] == idResep).toList();
+
+        for (var m in filteredMemunculkan) {
+          final obat = obatMap[m['kode_obat']];
+          if (obat != null) {
+            daftarObat.add({
+              "nama_obat": obat['nama_obat'] ?? "-",
+              "aturan_pakai": m['aturan_pakai'] ?? "-",
+              "kuantitas": m['kuantitas'] ?? 0,
+              "harga_satuan": obat['harga_satuan'] ?? 0,
+            });
+          }
+        }
+
+        combinedResepList.add({
+          "id_pendaftaran": idPendaftaran,
+          "nama_pasien": pasien?['nama_pasien'] ?? "N/A",
+          "nama_dokter": dokter?['nama_dokter'] ?? "N/A",
+          "status": resep['status'] ?? "N/A",
+          "tanggal_resep": detailResep?['tanggal_eresep'] ?? "N/A",
+          "detail_resep": {
+            "id_resep": idResep,
+            "poli": dokter?['poli'] ?? "N/A",
+            "umur": pasien?['umur']?.toString() ?? "N/A",
+            "beratBadan": pasien?['berat_badan']?.toString() ?? "N/A",
+            "diagnosa": pasien?['diagnosa'] ?? "N/A",
+            "keterangan": detailResep?['catatan'] ??
+                "N/A", // Use 'catatan' from detail_eresep
+            "daftarObat": daftarObat,
+            "catatan": detailResep?['catatan'] ??
+                "N/A", // Redundant if 'keterangan' is the same
+          },
+        });
+      }
+
+      if (mounted) {
+        setState(() {
+          _resepList = combinedResepList;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _apiErrorMessage = e.toString().contains("Failed host lookup")
+              ? "Tidak ada koneksi internet atau server tidak dapat dijangkau."
+              : e.toString();
+          _resepList = []; // Clear list on error
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching E-Resep: $_apiErrorMessage')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    }
   }
 
   /// Filters and sorts the prescription list based on current filters and search.
   List<Map<String, dynamic>> get _filteredAndSortedData {
-    List<Map<String, dynamic>> data = List.from(_mockResepList);
+    List<Map<String, dynamic>> data =
+        List.from(_resepList); // Use data from API
 
     // 1. Filter by status
     if (_statusFilter != "Semua") {
@@ -309,7 +303,6 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
       totalHarga += (obat['kuantitas'] ?? 0) * (obat['harga_satuan'] ?? 0);
     }
 
-    // Format total harga ke mata uang Rupiah
     final formatCurrency = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
@@ -461,7 +454,7 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
                   // Catatan Section
                   _buildSectionCard(
                     title: "Catatan",
-                    content: detailResep['catatan'] ?? '-',
+                    content: detailResep['catatan'] ?? '-', // Use 'catatan'
                     icon: Icons.notes,
                   ),
                   const SizedBox(height: 20),
@@ -506,7 +499,7 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
     );
   }
 
-  // --- Main Build Method ---
+  // --- Main Build Method (PASTIKAN INI ADA DI DALAM KELAS _EresepAdminPageState) ---
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> displayedData = _showAll
@@ -535,126 +528,147 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
         onSearchChanged: (text) {
           setState(() {
             _searchText = text;
-            _filterAndSortResep();
           });
         },
         searchHintText: 'Cari E-Resep...',
       ),
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pantau E-Resep', // Judul khusus untuk Admin
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Menampilkan daftar E-Resep.',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Categories / Status Filter Buttons
-                      _buildCategoriesSection(),
-                      const SizedBox(height: 16),
-
-                      // List Resep Cards
-                      displayedData.isEmpty
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(24.0),
-                                child: Text(
-                                  'Tidak ada E-Resep ditemukan.',
-                                  style: TextStyle(
-                                      fontSize: 16, color: Colors.grey),
-                                ),
-                              ),
-                            )
-                          : Column(
-                              children: displayedData.map((resep) {
-                                // Pass antreanNo if status is 'Diproses'
-                                final int? currentAntreanNo =
-                                    resep['status'] == 'Diproses'
-                                        ? antreanMap[resep['id_pendaftaran']]
-                                        : null;
-                                return _buildResepCard(resep, currentAntreanNo);
-                              }).toList(),
-                            ),
-
-                      // "Lihat Semua" button if more data
-                      if (_filteredAndSortedData.length > 12 && !_showAll)
+      body: _isLoadingData
+          ? Center(
+              child: CircularProgressIndicator(
+              color: primaryColor,
+            ))
+          : RefreshIndicator(
+              onRefresh: _fetchEresepData, // Allow pull to refresh
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverList(
+                    delegate: SliverChildListDelegate(
+                      [
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showAll = !_showAll;
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pantau E-Resep', // Judul khusus untuk Admin
+                                style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor),
                               ),
-                              child: Text(
-                                  _showAll ? "Sembunyikan" : "Lihat Semua"),
-                            ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Menampilkan daftar E-Resep.',
+                                style:
+                                    TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Categories / Status Filter Buttons
+                              _buildCategoriesSection(),
+                              const SizedBox(height: 16),
+
+                              // List Resep Cards
+                              displayedData.isEmpty && !_isLoadingData
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24.0),
+                                        child: Text(
+                                          _apiErrorMessage != null
+                                              ? 'Error: $_apiErrorMessage'
+                                              : 'Tidak ada E-Resep ditemukan.',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              fontSize: 16, color: Colors.grey),
+                                        ),
+                                      ),
+                                    )
+                                  : Column(
+                                      children: displayedData.map((resep) {
+                                        // Pass antreanNo if status is 'Diproses'
+                                        final int? currentAntreanNo =
+                                            resep['status'] == 'Diproses'
+                                                ? antreanMap[
+                                                    resep['id_pendaftaran']]
+                                                : null;
+                                        return _buildResepCard(
+                                            resep, currentAntreanNo);
+                                      }).toList(),
+                                    ),
+
+                              // "Lihat Semua" button if more data
+                              if (_filteredAndSortedData.length > 12 &&
+                                  !_showAll)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0),
+                                  child: Center(
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _showAll = !_showAll;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 24, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: Text(_showAll
+                                          ? "Sembunyikan"
+                                          : "Lihat Semua"),
+                                    ),
+                                  ),
+                                ),
+                              // "Sembunyikan" button if showing all
+                              if (_filteredAndSortedData.length > 12 &&
+                                  _showAll)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0),
+                                  child: Center(
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _showAll = !_showAll;
+                                          _scrollController.animateTo(0,
+                                              duration: const Duration(
+                                                  milliseconds: 500),
+                                              curve: Curves.easeInOut);
+                                        });
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: primaryColor,
+                                        side: BorderSide(color: primaryColor),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 24, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: const Text("Sembunyikan"),
+                                    ),
+                                  ),
+                                ),
+
+                              const SizedBox(
+                                  height: 50), // Spacing at the bottom
+                            ],
                           ),
                         ),
-                      // "Sembunyikan" button if showing all
-                      if (_filteredAndSortedData.length > 12 && _showAll)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showAll = !_showAll;
-                                  _scrollController.animateTo(0,
-                                      duration:
-                                          const Duration(milliseconds: 500),
-                                      curve: Curves.easeInOut);
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: primaryColor,
-                                side: BorderSide(color: primaryColor),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text("Sembunyikan"),
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 50), // Spacing at the bottom
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -694,6 +708,8 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
       ),
     );
   }
+
+  // --- Helper Methods (THIS SECTION MUST BE WITHIN THE _EresepAdminPageState CLASS) ---
 
   /// Helper for building a detail item (label and value).
   Widget _buildDetailItem(String label, String value) {
@@ -759,8 +775,6 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
       ),
     );
   }
-
-  // --- Helper Methods (PENTING: Pastikan semua metode ini ada di sini, di dalam kelas _EresepAdminPageState) ---
 
   /// Builds a single prescription card for admin (no action buttons).
   Widget _buildResepCard(Map<String, dynamic> resep, int? antreanNo) {
@@ -928,7 +942,6 @@ class _EresepAdminPageState extends State<EresepAdminPage> {
                   onTap: () {
                     setState(() {
                       _statusFilter = status;
-                      _filterAndSortResep(); // Re-call when filter changes
                     });
                   },
                   child: Column(

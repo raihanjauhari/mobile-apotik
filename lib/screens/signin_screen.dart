@@ -172,8 +172,7 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (e) {
       // Handle error jaringan atau lainnya
       setState(() {
-        _globalMessage =
-            "Gagal terhubung ke server. Periksa koneksi internet Anda.";
+        _globalMessage = "Password Salah";
         _loginSuccess = false;
       });
       print("Network/API Call Error: $e");

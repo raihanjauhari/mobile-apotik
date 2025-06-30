@@ -158,8 +158,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     } catch (e) {
       // Handle network errors (e.g., no internet, server not reachable)
       setState(() {
-        _errorMessage =
-            "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
+        _errorMessage = "Kode Verifikasi Salah";
       });
       print("Network/API Call Error: $e");
     } finally {

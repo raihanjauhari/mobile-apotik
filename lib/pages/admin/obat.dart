@@ -11,11 +11,12 @@ import 'package:login_signup/pages/admin/dashboard_admin.dart';
 import 'package:login_signup/pages/admin/eresep.dart'; // Sesuaikan nama kelas jika berbeda
 import 'package:login_signup/pages/admin/akun.dart'; // Sesuaikan nama kelas jika berbeda
 
-// Definisi warna konsisten
+// Definisi warna konsisten (tetap global)
 const Color primaryColor = Color(0xFF2A4D69);
 const Color secondaryColor = Color(0xFF6B8FB4);
 const Color accentColor = Color(0xFFF0F4F8);
 const Color greenAccent = Color(0xFF8BC34A);
+const Color redColor = Color(0xFFD32F2F); // Untuk error messages
 
 // --- Widget untuk Form Tambah Obat (AddObatForm) ---
 class AddObatForm extends StatefulWidget {
@@ -64,35 +65,44 @@ class _AddObatFormState extends State<AddObatForm> {
       "harga_satuan": int.parse(_hargaSatuanController.text),
       "stok": int.parse(_stokController.text),
       "deskripsi": _deskripsiController.text,
+      "id_user": "U002" // Hardcoded ID User sesuai data API yang diberikan
     };
 
     try {
       final response = await http.post(
-        Uri.parse("https://ti054b05api.agussbn.my.id/api/obat"),
+        Uri.parse("https://ti054b05.agussbn.my.id/api/obat"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(formData),
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Obat berhasil ditambahkan!')),
-        );
-        widget.onSuccess();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Obat berhasil ditambahkan!')),
+          );
+          widget.onSuccess();
+        }
       } else {
         final errorData = json.decode(response.body);
         throw Exception(errorData['message'] ?? 'Gagal menambahkan obat');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $_errorMessage')),
-      );
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().contains("Failed host lookup")
+              ? "Tidak ada koneksi internet atau server tidak dapat dijangkau."
+              : e.toString();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $_errorMessage')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -104,7 +114,7 @@ class _AddObatFormState extends State<AddObatForm> {
     int? maxLines = 1,
     String? Function(String?)? validator,
     bool readOnly = false,
-    IconData? prefixIcon, // New parameter for prefix icon
+    IconData? prefixIcon,
   }) {
     return TextFormField(
       controller: controller,
@@ -112,8 +122,7 @@ class _AddObatFormState extends State<AddObatForm> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
-      style:
-          const TextStyle(color: primaryColor), // Text color inside the field
+      style: const TextStyle(color: primaryColor),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
@@ -127,7 +136,7 @@ class _AddObatFormState extends State<AddObatForm> {
             const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none, // Remove default border
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -156,11 +165,10 @@ class _AddObatFormState extends State<AddObatForm> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20)), // Sudut lebih membulat
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       clipBehavior: Clip.antiAlias,
       child: Scaffold(
-        backgroundColor: accentColor, // Latar belakang form
+        backgroundColor: accentColor,
         appBar: AppBar(
           title: Text(
             'Tambah Data Obat',
@@ -169,21 +177,19 @@ class _AddObatFormState extends State<AddObatForm> {
           ),
           centerTitle: true,
           backgroundColor: Colors.white,
-          elevation: 2, // Sedikit bayangan
+          elevation: 2,
           leading: IconButton(
             icon: Icon(Icons.close, color: primaryColor),
             onPressed: widget.onClose,
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-              24.0, 24.0, 24.0, 16.0), // Padding bawah dikurangi
+          padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize:
-                  MainAxisSize.min, // Penting untuk meminimalkan tinggi
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (_errorMessage != null)
                   Container(
@@ -267,7 +273,7 @@ class _AddObatFormState extends State<AddObatForm> {
                   prefixIcon: Icons.description_outlined,
                   maxLines: 4,
                 ),
-                const SizedBox(height: 24), // Mengurangi jarak sebelum tombol
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
@@ -275,10 +281,9 @@ class _AddObatFormState extends State<AddObatForm> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(15), // Sudut tombol lebih besar
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    elevation: 5, // Efek bayangan tombol
+                    elevation: 5,
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -294,7 +299,7 @@ class _AddObatFormState extends State<AddObatForm> {
                               letterSpacing: 0.5),
                         ),
                 ),
-                const SizedBox(height: 8), // Mengurangi jarak setelah tombol
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -366,42 +371,54 @@ class _EditObatFormState extends State<EditObatForm> {
     });
 
     final formData = {
-      "id": widget.dataObat['id'], // Pastikan ID dikirim untuk identifikasi
       "kode_obat": _kodeObatController.text,
       "nama_obat": _namaObatController.text,
       "harga_satuan": int.parse(_hargaSatuanController.text),
       "stok": int.parse(_stokController.text),
       "deskripsi": _deskripsiController.text,
+      "id_user": widget.dataObat['id_user'] ??
+          "U002" // Pastikan id_user tetap ada atau default
     };
 
     try {
       final response = await http.put(
         Uri.parse(
-            "https://ti054b05api.agussbn.my.id/api/obat/${formData['kode_obat']}"),
+            "https://ti054b05.agussbn.my.id/api/obat/${widget.dataObat['kode_obat']}"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(formData),
       );
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Obat berhasil diupdate!')),
-        );
-        widget.onSuccess(formData); // Pass updated data back
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Obat berhasil diupdate!')),
+          );
+          widget.onSuccess({
+            ...widget.dataObat, // Pertahankan ID asli jika ada
+            ...formData, // Timpa dengan data yang diupdate
+          });
+        }
       } else {
         final errorData = json.decode(response.body);
         throw Exception(errorData['message'] ?? 'Gagal mengupdate obat');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $_errorMessage')),
-      );
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().contains("Failed host lookup")
+              ? "Tidak ada koneksi internet atau server tidak dapat dijangkau."
+              : e.toString();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $_errorMessage')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -413,7 +430,7 @@ class _EditObatFormState extends State<EditObatForm> {
     int? maxLines = 1,
     String? Function(String?)? validator,
     bool readOnly = false,
-    IconData? prefixIcon, // New parameter for prefix icon
+    IconData? prefixIcon,
   }) {
     return TextFormField(
       controller: controller,
@@ -421,8 +438,7 @@ class _EditObatFormState extends State<EditObatForm> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
-      style:
-          const TextStyle(color: primaryColor), // Text color inside the field
+      style: const TextStyle(color: primaryColor),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
@@ -436,7 +452,7 @@ class _EditObatFormState extends State<EditObatForm> {
             const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none, // Remove default border
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -465,11 +481,10 @@ class _EditObatFormState extends State<EditObatForm> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20)), // Sudut lebih membulat
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       clipBehavior: Clip.antiAlias,
       child: Scaffold(
-        backgroundColor: accentColor, // Latar belakang form
+        backgroundColor: accentColor,
         appBar: AppBar(
           title: Text(
             'Edit Data Obat',
@@ -478,21 +493,19 @@ class _EditObatFormState extends State<EditObatForm> {
           ),
           centerTitle: true,
           backgroundColor: Colors.white,
-          elevation: 2, // Sedikit bayangan
+          elevation: 2,
           leading: IconButton(
             icon: Icon(Icons.close, color: primaryColor),
             onPressed: widget.onClose,
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-              24.0, 24.0, 24.0, 16.0), // Padding bawah dikurangi
+          padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize:
-                  MainAxisSize.min, // Penting untuk meminimalkan tinggi
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (_errorMessage != null)
                   Container(
@@ -572,7 +585,7 @@ class _EditObatFormState extends State<EditObatForm> {
                   prefixIcon: Icons.description_outlined,
                   maxLines: 4,
                 ),
-                const SizedBox(height: 24), // Mengurangi jarak sebelum tombol
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
@@ -580,8 +593,7 @@ class _EditObatFormState extends State<EditObatForm> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(15), // Sudut tombol lebih besar
+                      borderRadius: BorderRadius.circular(15),
                     ),
                     elevation: 5,
                   ),
@@ -599,7 +611,7 @@ class _EditObatFormState extends State<EditObatForm> {
                               letterSpacing: 0.5),
                         ),
                 ),
-                const SizedBox(height: 8), // Mengurangi jarak setelah tombol
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -618,153 +630,29 @@ class ObatAdminPage extends StatefulWidget {
 }
 
 class _ObatAdminPageState extends State<ObatAdminPage> {
-  List<Map<String, dynamic>> _originalObatList = [];
+  // Gunakan List ini untuk menyimpan data dari API
+  List<Map<String, dynamic>> _obatList = [];
   String _statusFilter = "Semua";
   String _searchText = "";
   bool _showAll = false;
-  bool _isLoadingData = false;
+  bool _isLoadingData = false; // Status loading untuk data utama
+  String? _apiErrorMessage; // Untuk error dari fetch data
 
   int _selectedIndex = 2; // Index untuk Obat di BottomNavBar
   final TextEditingController _headerSearchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTopButton = false;
 
-  // --- Mock Data Obat (sesuaikan jika Anda sudah punya API) ---
-  final List<Map<String, dynamic>> _mockObatList = [
-    {
-      "id": "1", // Tambahkan ID untuk operasi edit/hapus
-      "kode_obat": "OBT001",
-      "nama_obat": "Paracetamol 500mg",
-      "stok": 150,
-      "harga_satuan": 6000,
-      "deskripsi": "Obat pereda nyeri dan demam."
-    },
-    {
-      "id": "2",
-      "kode_obat": "OBT002",
-      "nama_obat": "Amoxicillin 250mg",
-      "stok": 80,
-      "harga_satuan": 3000,
-      "deskripsi": "Antibiotik untuk infeksi bakteri."
-    },
-    {
-      "id": "3",
-      "kode_obat": "OBT003",
-      "nama_obat": "Vitamin C 1000mg",
-      "stok": 200,
-      "harga_satuan": 75000,
-      "deskripsi": "Suplemen untuk daya tahan tubuh."
-    },
-    {
-      "id": "4",
-      "kode_obat": "OBT004",
-      "nama_obat": "Ibuprofen 250mg",
-      "stok": 0, // Stok Habis
-      "harga_satuan": 12000,
-      "deskripsi": "Obat anti-inflamasi non-steroid."
-    },
-    {
-      "id": "5",
-      "kode_obat": "OBT005",
-      "nama_obat": "Dexamethasone 0.5mg",
-      "stok": 120,
-      "harga_satuan": 1000,
-      "deskripsi": "Obat kortikosteroid untuk alergi dan radang."
-    },
-    {
-      "id": "6",
-      "kode_obat": "OBT006",
-      "nama_obat": "Lansoprazole 30 mg",
-      "stok": 90,
-      "harga_satuan": 15000,
-      "deskripsi": "Obat untuk meredakan gejala asam lambung."
-    },
-    {
-      "id": "7",
-      "kode_obat": "OBT007",
-      "nama_obat": "Betadine Solution",
-      "stok": 50,
-      "harga_satuan": 8000,
-      "deskripsi": "Antiseptik untuk luka."
-    },
-    {
-      "id": "8",
-      "kode_obat": "OBT008",
-      "nama_obat": "Counterpain Cream",
-      "stok": 0, // Stok Habis
-      "harga_satuan": 12000,
-      "deskripsi": "Krim pereda nyeri otot."
-    },
-    {
-      "id": "9",
-      "kode_obat": "OBT009",
-      "nama_obat": "Diapet",
-      "stok": 75,
-      "harga_satuan": 1500,
-      "deskripsi": "Obat diare herbal."
-    },
-    {
-      "id": "10",
-      "kode_obat": "OBT010",
-      "nama_obat": "Bodrex Migra",
-      "stok": 110,
-      "harga_satuan": 1800,
-      "deskripsi": "Obat untuk sakit kepala migrain."
-    },
-    {
-      "id": "11",
-      "kode_obat": "OBT011",
-      "nama_obat": "Promag",
-      "stok": 0, // Stok Habis
-      "harga_satuan": 1200,
-      "deskripsi": "Obat sakit maag."
-    },
-    {
-      "id": "12",
-      "kode_obat": "OBT012",
-      "nama_obat": "Biogesic",
-      "stok": 130,
-      "harga_satuan": 1400,
-      "deskripsi": "Paracetamol merek lain."
-    },
-    {
-      "id": "13",
-      "kode_obat": "OBT013",
-      "nama_obat": "Sanmol",
-      "stok": 95,
-      "harga_satuan": 1600,
-      "deskripsi": "Obat penurun panas dan pereda nyeri."
-    },
-    {
-      "id": "14",
-      "kode_obat": "OBT014",
-      "nama_obat": "OBH Combi",
-      "stok": 60,
-      "harga_satuan": 7000,
-      "deskripsi": "Obat batuk berdahak dan pilek."
-    },
-    {
-      "id": "15",
-      "kode_obat": "OBT015",
-      "nama_obat": "FreshCare Roll On",
-      "stok": 25,
-      "harga_satuan": 9500,
-      "deskripsi": "Minyak angin aroma terapi."
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
-    _originalObatList = List<Map<String, dynamic>>.from(
-        _mockObatList); // Initialize with mock data
     _scrollController.addListener(_scrollListener);
     _headerSearchController.addListener(() {
       setState(() {
         _searchText = _headerSearchController.text;
       });
     });
-    _fetchObat(); // Initial fetch
+    _fetchObat(); // Panggil fungsi untuk mengambil data obat dari API
   }
 
   @override
@@ -803,46 +691,58 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
     );
   }
 
-  // --- Simulate API calls ---
+  // --- API Calls ---
+
+  /// Mengambil data obat dari API
   Future<void> _fetchObat() async {
     setState(() {
       _isLoadingData = true;
+      _apiErrorMessage = null; // Clear previous errors
     });
-    await Future.delayed(
-        const Duration(milliseconds: 500)); // Simulate network delay
-    setState(() {
-      _originalObatList =
-          List<Map<String, dynamic>>.from(_mockObatList); // Reload mock data
-      _isLoadingData = false;
-    });
-  }
+    try {
+      final response =
+          await http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/obat'));
 
-  Future<void> _addObat(Map<String, dynamic> newObat) async {
-    setState(() {
-      newObat['id'] = (_originalObatList.length + 1).toString();
-      _originalObatList.add(newObat);
-    });
-    await _fetchObat(); // Re-fetch to apply sort/filter on new data
-  }
-
-  Future<void> _editObat(Map<String, dynamic> updatedObat) async {
-    setState(() {
-      final index =
-          _originalObatList.indexWhere((o) => o['id'] == updatedObat['id']);
-      if (index != -1) {
-        _originalObatList[index] = updatedObat;
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _obatList = data.cast<Map<String, dynamic>>();
+        });
+      } else {
+        final errorBody = json.decode(response.body);
+        throw Exception(errorBody['message'] ??
+            'Gagal memuat data obat. Status Code: ${response.statusCode}');
       }
-    });
-    await _fetchObat(); // Re-fetch to apply sort/filter on updated data
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _apiErrorMessage = e.toString().contains("Failed host lookup")
+              ? "Tidak ada koneksi internet atau server tidak dapat dijangkau."
+              : e.toString();
+          _obatList = []; // Clear list on error
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $_apiErrorMessage')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    }
   }
 
-  // METHOD _deleteObat DIHAPUS SEPENUHNYA SESUAI PERMINTAAN
+  // LOGIKA DAN TOMBOL DELETE DIHAPUS SEPENUHNYA SESUAI PERMINTAAN KAREN
 
+  // --- Filter and Search Logic ---
   List<Map<String, dynamic>> get _filteredAndSortedData {
-    List<Map<String, dynamic>> data = List.from(_originalObatList);
+    List<Map<String, dynamic>> data =
+        List.from(_obatList); // Gunakan data dari API
 
     if (_statusFilter == "Stok Habis") {
-      data = data.where((obat) => obat['stok'] == 0).toList();
+      data = data.where((obat) => (obat['stok'] ?? 0) == 0).toList();
     }
 
     if (_searchText.isNotEmpty) {
@@ -863,6 +763,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
     return data;
   }
 
+  // --- Form Handling ---
   void _handleShowAddForm() {
     showDialog(
       context: context,
@@ -894,7 +795,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
     );
   }
 
-  // --- Widget untuk menampilkan detail di modal ---
+  // --- Widget for displaying details in a modal ---
   void _showObatDetailModal(Map<String, dynamic> obat) {
     final formatCurrency = NumberFormat.currency(
       locale: 'id_ID',
@@ -906,23 +807,24 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)), // Sudut lebih membulat
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20), // Sudut lebih membulat
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
+                // Corrected from box boxShadow:
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15), // Bayangan lebih halus
+                  color: Colors.black.withOpacity(0.15),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(24), // Padding lebih besar
+            padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -940,32 +842,26 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                       obat['nama_obat'] ?? 'Detail Obat',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 24, // Ukuran font lebih besar
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: primaryColor),
                     ),
                   ),
-                  const Divider(
-                      height: 25,
-                      thickness: 1.5,
-                      color: accentColor), // Divider lebih tebal
+                  const Divider(height: 25, thickness: 1.5, color: accentColor),
                   const SizedBox(height: 15),
                   Center(
                     child: ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(15), // Sudut gambar membulat
+                      borderRadius: BorderRadius.circular(15),
                       child: Image.asset(
-                        'assets/images/obat.jpg', // Pastikan path asset ini benar di pubspec.yaml
-                        width: 180, // Ukuran gambar lebih besar
-                        height: 180, // Ukuran gambar lebih besar
+                        'assets/images/obat.jpg',
+                        width: 180,
+                        height: 180,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           debugPrint(
                               'ERROR: Gagal memuat aset gambar: assets/images/obat.jpg');
                           return Icon(Icons.broken_image,
-                              size: 120,
-                              color: Colors
-                                  .grey[300]); // Ukuran ikon error lebih besar
+                              size: 120, color: Colors.grey[300]);
                         },
                       ),
                     ),
@@ -981,9 +877,8 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                     "Stok Tersedia",
                     obat['stok'] != null ? '${obat['stok']} Unit' : '-',
                     Icons.inventory,
-                    valueColor: obat['stok'] == 0
-                        ? Colors.red
-                        : primaryColor, // Warna stok sesuai
+                    valueColor:
+                        (obat['stok'] ?? 0) == 0 ? Colors.red : primaryColor,
                   ),
                   _buildDetailRow("Lokasi", "Banjarmasin", Icons.location_on),
                   const SizedBox(height: 25),
@@ -1005,11 +900,9 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                           style: TextStyle(color: Colors.white, fontSize: 16)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[700],
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14), // Padding lebih besar
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              12), // Sudut tombol membulat
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
@@ -1024,11 +917,9 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14), // Padding lebih besar
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              12), // Sudut tombol membulat
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: const Text(
@@ -1054,25 +945,24 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: primaryColor), // Ukuran ikon lebih besar
-          const SizedBox(width: 15), // Jarak lebih besar
+          Icon(icon, size: 22, color: primaryColor),
+          const SizedBox(width: 15),
           Expanded(
-            // Wrap with Expanded for better text handling
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
                   style: const TextStyle(
-                      fontSize: 14, // Ukuran font label
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: Colors.grey),
                 ),
-                const SizedBox(height: 4), // Jarak lebih besar
+                const SizedBox(height: 4),
                 Text(
                   value,
                   style: TextStyle(
-                      fontSize: 17, // Ukuran font nilai
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                       color: valueColor ?? Colors.black87),
                 ),
@@ -1092,12 +982,11 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18), // Padding lebih besar
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: accentColor,
-        borderRadius: BorderRadius.circular(15), // Sudut lebih membulat
-        border: Border.all(
-            color: Colors.grey.shade300, width: 1.0), // Border lebih terlihat
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade300, width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1111,13 +1000,12 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
         children: [
           Row(
             children: [
-              Icon(icon,
-                  size: 22, color: primaryColor), // Ukuran ikon lebih besar
+              Icon(icon, size: 22, color: primaryColor),
               const SizedBox(width: 10),
               Text(
                 title,
                 style: TextStyle(
-                    fontSize: 17, // Ukuran font judul
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: primaryColor),
               ),
@@ -1126,10 +1014,8 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
           const SizedBox(height: 10),
           Text(
             content,
-            style: TextStyle(
-                fontSize: 15,
-                color: Colors.grey[800],
-                height: 1.5), // Line height
+            style:
+                TextStyle(fontSize: 15, color: Colors.grey[800], height: 1.5),
           ),
         ],
       ),
@@ -1144,16 +1030,12 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
       decimalDigits: 0,
     );
 
-    if (_isLoadingData) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (data.isEmpty) {
+    if (data.isEmpty && !_isLoadingData) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24.0),
           child: Text(
-            'Tidak ada data obat ditemukan.',
+            'Tidak ada data obat ditemukan untuk filter ini.',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ),
@@ -1165,25 +1047,23 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 18.0, // Jarak antar kartu
-        mainAxisSpacing: 18.0, // Jarak antar kartu
-        childAspectRatio:
-            0.8, // Sesuaikan rasio untuk tampilan yang lebih baik, sedikit lebih tinggi
+        crossAxisSpacing: 18.0,
+        mainAxisSpacing: 18.0,
+        childAspectRatio: 0.78, // Adjusted for better fit, try 0.78 or 0.75
       ),
       itemCount: data.length,
       itemBuilder: (context, index) {
         final obat = data[index];
-        final isStokHabis = obat['stok'] == 0;
+        final isStokHabis = (obat['stok'] ?? 0) == 0;
 
         return Card(
           clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(15)), // Sudut kartu lebih membulat
-          elevation: 4, // Bayangan kartu lebih terlihat
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 4,
           child: InkWell(
             onTap: () {
-              _showObatDetailModal(obat); // Menampilkan modal detail obat
+              _showObatDetailModal(obat);
             },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1192,24 +1072,21 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                   flex: 3,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[100], // Warna latar belakang gambar
-                      borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(
-                              15)), // Sudut atas gambar membulat
+                      color: Colors.grey[100],
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(15)),
                     ),
                     child: Center(
                       child: Image.asset(
-                        'assets/images/obat.jpg', // Pastikan asset ini ada
-                        width: double.infinity, // Mengisi lebar container
-                        height: double.infinity, // Mengisi tinggi container
+                        'assets/images/obat.jpg',
+                        width: double.infinity,
+                        height: double.infinity,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           debugPrint(
                               'ERROR: Gagal memuat aset gambar: assets/images/obat.jpg');
                           return Icon(Icons.broken_image,
-                              size: 60,
-                              color: Colors
-                                  .grey[400]); // Ukuran ikon error lebih besar
+                              size: 60, color: Colors.grey[400]);
                         },
                       ),
                     ),
@@ -1218,7 +1095,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                 Expanded(
                   flex: 2,
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0), // Padding lebih besar
+                    padding: const EdgeInsets.all(12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1227,17 +1104,17 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                           obat['nama_obat'] ?? 'Nama Obat',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 17, // Ukuran font lebih besar
+                            fontSize: 17,
                             color: primaryColor,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6), // Jarak lebih besar
+                        const SizedBox(height: 6),
                         Text(
-                          formatCurrency.format(obat['harga_satuan']),
+                          formatCurrency.format(obat['harga_satuan'] ?? 0),
                           style: TextStyle(
-                            fontSize: 19, // Ukuran font harga lebih besar
+                            fontSize: 19,
                             fontWeight: FontWeight.bold,
                             color: primaryColor,
                           ),
@@ -1249,32 +1126,28 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                             Row(
                               children: [
                                 Icon(Icons.location_on,
-                                    size: 18,
-                                    color:
-                                        Colors.grey[600]), // Ukuran ikon lokasi
+                                    size: 18, color: Colors.grey[600]),
                                 const SizedBox(width: 6),
                                 const Text(
-                                  "Banjarmasin", // Lokasi hardcoded "Banjarmasin"
+                                  "Banjarmasin",
                                   style: TextStyle(
                                       fontSize: 13, color: Colors.grey),
                                 ),
                               ],
                             ),
-                            if (isStokHabis) // Tampilkan badge "Stok Habis"
+                            if (isStokHabis)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4), // Padding badge
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color:
-                                      Colors.red[600], // Warna merah lebih kuat
+                                  color: redColor,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: const Text(
                                   'Stok Habis',
                                   style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 11, // Ukuran font badge
+                                      fontSize: 11,
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -1296,13 +1169,12 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
   Widget _buildTrackYourMedsBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20.0), // Padding lebih besar
+      padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: primaryColor, // Warna latar belakang banner
-        borderRadius: BorderRadius.circular(15), // Sudut lebih membulat
+        color: primaryColor,
+        borderRadius: BorderRadius.circular(15),
         image: const DecorationImage(
-          image: AssetImage(
-              'assets/images/banner_bg.png'), // Pastikan path ini benar di pubspec.yaml
+          image: AssetImage('assets/images/banner_bg.png'),
           fit: BoxFit.cover,
           colorFilter: ColorFilter.mode(Colors.black38, BlendMode.darken),
         ),
@@ -1318,17 +1190,17 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Pantau Obatmu!', // Teks lebih menarik
+            'Pantau Obatmu!',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 22, // Ukuran font lebih besar
+              fontSize: 22,
               fontWeight: FontWeight.bold,
-              letterSpacing: 0.8, // Sedikit letter spacing
+              letterSpacing: 0.8,
             ),
           ),
-          const SizedBox(height: 6), // Jarak lebih besar
+          const SizedBox(height: 6),
           const Text(
-            'Simpan obat di tempat sejuk dan kering untuk menjaga kualitasnya.', // Teks lebih informatif
+            'Simpan obat di tempat sejuk dan kering untuk menjaga kualitasnya.',
             style: TextStyle(
               color: Colors.white70,
               fontSize: 15,
@@ -1341,19 +1213,16 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                   "Pantau Obat", "Fitur pelacakan obat akan datang!");
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  secondaryColor, // Gunakan warna kontras untuk tombol
+              backgroundColor: secondaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(10), // Sudut tombol membulat
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 28, vertical: 14), // Padding lebih besar
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               elevation: 3,
             ),
             child: const Text('Pelajari Lebih Lanjut',
-                style: TextStyle(fontSize: 16)), // Teks tombol lebih jelas
+                style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -1370,7 +1239,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
         mainAxisAlignment: MainAxisAlignment.start,
         children: filterOptions.map((label) {
           return Padding(
-            padding: const EdgeInsets.only(right: 10.0), // Jarak antar chip
+            padding: const EdgeInsets.only(right: 10.0),
             child: ChoiceChip(
               label: Text(
                 label,
@@ -1393,12 +1262,11 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                   _statusFilter = label;
                 });
               },
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 18, vertical: 12), // Padding chip
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25), // Sudut chip membulat
+                borderRadius: BorderRadius.circular(25),
               ),
-              elevation: 3, // Bayangan chip
+              elevation: 3,
             ),
           );
         }).toList(),
@@ -1410,9 +1278,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> displayedData = _showAll
         ? _filteredAndSortedData
-        : _filteredAndSortedData
-            .take(4)
-            .toList(); // Show first 4 by default, then all
+        : _filteredAndSortedData.take(4).toList();
 
     return Scaffold(
       backgroundColor: accentColor,
@@ -1423,8 +1289,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
             _searchText = value;
           });
         },
-        primaryColor:
-            primaryColor, // Pastikan CustomHeader menerima primaryColor
+        primaryColor: primaryColor,
         onNotificationPressed: () {
           _showSimpleModal(
               'Notifikasi', 'Anda memiliki beberapa notifikasi baru.');
@@ -1437,47 +1302,42 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
             onRefresh: _fetchObat,
             child: SingleChildScrollView(
               controller: _scrollController,
-              padding: const EdgeInsets.all(20.0), // Padding halaman utama
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Manajemen Obat', // Judul lebih relevan
+                    'Manajemen Obat',
                     style: TextStyle(
-                        fontSize: 28, // Ukuran font lebih besar
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: primaryColor),
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Kelola semua data obat yang tersedia di inventaris Anda dengan mudah.', // Subtitle lebih deskriptif
+                    'Kelola semua data obat yang tersedia di inventaris Anda dengan mudah.',
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 24),
-
-                  _buildTrackYourMedsBanner(), // Banner
-                  const SizedBox(height: 30), // Jarak lebih besar
-
+                  _buildTrackYourMedsBanner(),
+                  const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Daftar Obat Tersedia', // Judul bagian
+                        'Daftar Obat Tersedia',
                         style: TextStyle(
-                            fontSize: 22, // Ukuran font lebih besar
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: primaryColor),
                       ),
                       ElevatedButton.icon(
                         onPressed: _handleShowAddForm,
-                        icon: const Icon(
-                            Icons.add_circle_outline, // Ikon lebih deskriptif
-                            size: 22,
-                            color: Colors.white),
+                        icon: const Icon(Icons.add_circle_outline,
+                            size: 22, color: Colors.white),
                         label: const Text('Tambah Obat',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16)), // Teks tombol lebih ringkas
+                            style:
+                                TextStyle(color: Colors.white, fontSize: 16)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: greenAccent,
                           shape: RoundedRectangleBorder(
@@ -1490,15 +1350,15 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  _buildFilterStatusButtons(), // Filter status
-                  const SizedBox(height: 24), // Jarak lebih besar
-
+                  _buildFilterStatusButtons(),
+                  const SizedBox(height: 24),
                   _isLoadingData
-                      ? const Center(child: CircularProgressIndicator())
-                      : _buildMedicineGridCards(displayedData), // Grid Obat
-
-                  if (_filteredAndSortedData.length >
-                      4) // Show "Lihat Semua" only if there are more than 4 items
+                      ? Center(
+                          child: CircularProgressIndicator(
+                          color: primaryColor,
+                        ))
+                      : _buildMedicineGridCards(displayedData),
+                  if (_filteredAndSortedData.length > 4)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20.0),
                       child: Center(
@@ -1507,7 +1367,6 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                             setState(() {
                               _showAll = !_showAll;
                             });
-                            // Scroll to top or bottom when toggling "Lihat Semua"
                             if (_showAll) {
                               _scrollController.animateTo(
                                 _scrollController.position.maxScrollExtent,
@@ -1526,8 +1385,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                             backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 28,
-                                vertical: 14), // Padding lebih besar
+                                horizontal: 28, vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1541,17 +1399,15 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                         ),
                       ),
                     ),
-                  const SizedBox(
-                      height:
-                          60), // Spasi di bagian bawah agar tidak terpotong BottomNavBar
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
           ),
           if (_showScrollToTopButton)
             Positioned(
-              bottom: 80.0, // Di atas BottomNavBar
-              right: 20.0, // Jarak dari kanan
+              bottom: 80.0,
+              right: 20.0,
               child: FloatingActionButton(
                 onPressed: () {
                   _scrollController.animateTo(
@@ -1567,7 +1423,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
         ],
       ),
       bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex, // Menggunakan currentIndex
+        currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
@@ -1595,7 +1451,7 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
                 MaterialPageRoute(builder: (context) => const AkunAdminPage()),
               );
               break;
-            case 4: // Misal index 4 untuk logout
+            case 4:
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -1604,7 +1460,6 @@ class _ObatAdminPageState extends State<ObatAdminPage> {
               break;
           }
         },
-        // Pastikan parameter-parameter ini diterima oleh CustomBottomNavBar
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey[600]!,
         primaryColor: primaryColor,

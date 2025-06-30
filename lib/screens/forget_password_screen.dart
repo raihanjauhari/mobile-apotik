@@ -61,43 +61,88 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
         }),
       );
 
-      final responseData = json.decode(response.body);
+      Map<String, dynamic> responseData;
+      if (response.body.isNotEmpty) {
+        try {
+          responseData = json.decode(response.body);
+        } catch (e) {
+          // Tangani kasus jika respons body bukan JSON valid
+          responseData = {
+            'message': 'Invalid JSON response from server',
+            'error': e.toString()
+          };
+        }
+      } else {
+        responseData = {'message': 'Empty response from server'};
+      }
 
       if (response.statusCode == 200) {
-        // Backend Go Anda mengembalikan pesan sukses bahkan jika email tidak terdaftar
-        // Ini adalah perilaku yang baik untuk keamanan (tidak membocorkan keberadaan email)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(responseData['message'] ??
-                'Jika email Anda terdaftar, kode reset telah dikirim.'),
-          ),
-        );
-        // Navigasi ke halaman verifikasi kode, kirimkan emailnya
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VerificationCodeScreen(email: email),
-          ),
-        );
+        // Jika backend mengembalikan 200 OK (email terdaftar dan kode dikirim)
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(responseData['message'] ??
+                  'Kode reset telah dikirim. Periksa email Anda.'), // Pesan sukses umum
+            ),
+          );
+          // Navigasi ke halaman verifikasi kode HANYA jika email terdaftar/sukses dikirim
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VerificationCodeScreen(email: email),
+            ),
+          );
+        }
+      } else if (response.statusCode == 404) {
+        // Atau 400, tergantung apa yang dikirim backend Anda untuk "email tidak ditemukan"
+        // Jika backend mengembalikan 404 (Not Found)
+        // Diasumsikan sebagai indikasi email tidak terdaftar.
+        if (mounted) {
+          setState(() {
+            _errorMessage = responseData['message'] ?? 'Email tidak terdaftar.';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage),
+            ),
+          );
+        }
+        print(
+            "API Error (Email Not Found): ${response.statusCode} - ${response.body}");
       } else {
-        // Jika status code bukan 200
-        setState(() {
-          _errorMessage = responseData['error'] ??
-              'Gagal mengirim kode reset. Mohon coba lagi.';
-        });
-        print("API Error: ${response.statusCode} - ${response.body}");
+        // Jika status code lain (misal 500 Internal Server Error, 400 Bad Request untuk validasi lain)
+        if (mounted) {
+          setState(() {
+            _errorMessage = responseData['message'] ??
+                'Gagal mengirim kode reset. Mohon coba lagi.';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage),
+            ),
+          );
+        }
+        print(
+            "API Error (Unexpected): ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      // Handle network errors
-      setState(() {
-        _errorMessage =
-            "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
-      });
+      // Handle network errors (e.g., no internet, server unreachable)
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_errorMessage)),
+        );
+      }
       print("Network/API Call Error: $e");
     } finally {
-      setState(() {
-        _isLoading = false; // Nonaktifkan loading terlepas dari sukses/gagal
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Nonaktifkan loading terlepas dari sukses/gagal
+        });
+      }
     }
   }
 

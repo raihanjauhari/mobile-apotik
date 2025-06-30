@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:login_signup/widgets/header.dart';
-import 'package:login_signup/widgets/menu.dart';
+import 'package:login_signup/widgets/header.dart'; // Import CustomHeader
+import 'package:login_signup/widgets/menu.dart'; // Import CustomBottomNavBar
 import 'package:login_signup/screens/signin_screen.dart';
 import 'package:intl/intl.dart'; // Import for currency formatting
+import 'package:http/http.dart' as http; // Import for HTTP requests
+import 'dart:convert'; // For JSON encoding/decoding
 
 // Import halaman-halaman utama lainnya untuk navigasi BottomNavBar
 import 'package:login_signup/pages/petugas/dashboard_petugas.dart';
@@ -18,152 +20,23 @@ class EresepPage extends StatefulWidget {
 }
 
 class _EresepPageState extends State<EresepPage> {
-  // --- Colors (Salin dari DashboardPetugas agar konsisten) ---
+  // --- Colors (Consistent with other pages) ---
   final Color primaryColor = const Color(0xFF2A4D69);
   final Color secondaryColor = const Color(0xFF6B8FB4);
   final Color accentColor =
       const Color(0xFFF0F4F8); // Warna latar belakang terang
 
-  // --- Mock Data ---
-  List<Map<String, dynamic>> _mockResepList = [
-    {
-      "id_pendaftaran": "PD001",
-      "nama_pasien": "Anisa Aulya",
-      "nama_dokter": "dr. Lestari Wardhani",
-      "status": "Diproses", // Ini yang akan muncul sebagai "Antrian E-Resep"
-      "tanggal_resep": "2024-05-20",
-      "detail_resep": {
-        "id_resep": "ER001",
-        "poli": "Umum",
-        "umur": "28 Tahun",
-        "beratBadan": "60 Kg",
-        "diagnosa": "Influenza",
-        "keterangan": "Istirahat cukup, hindari makanan pedas.",
-        "daftarObat": [
-          {
-            "nama_obat": "Paracetamol 500mg",
-            "aturan_pakai": "3x sehari 1 tablet",
-            "kuantitas": 10,
-            "harga_satuan": 2000
-          },
-          {
-            "nama_obat": "Amoxicillin 250mg",
-            "aturan_pakai": "3x sehari 1 kapsul",
-            "kuantitas": 7,
-            "harga_satuan": 3000
-          },
-        ],
-        "catatan": "Resep untuk flu biasa.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD002",
-      "nama_pasien": "Setya Adjie",
-      "nama_dokter": "dr. Dewa Mahendra",
-      "status": "Menunggu Pembayaran",
-      "tanggal_resep": "2024-05-21",
-      "detail_resep": {
-        "id_resep": "ER002",
-        "poli": "Anak",
-        "umur": "5 Tahun",
-        "beratBadan": "20 Kg",
-        "diagnosa": "Demam Tinggi",
-        "keterangan": "Pantau suhu tubuh anak.",
-        "daftarObat": [
-          {
-            "nama_obat": "Tempra Sirup",
-            "aturan_pakai": "3x sehari 5ml",
-            "kuantitas": 1,
-            "harga_satuan": 35000
-          },
-        ],
-        "catatan": "Berikan sesuai dosis anak.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD003",
-      "nama_pasien": "Hairul Azmi",
-      "nama_dokter": "dr. Intan Prameswari",
-      "status":
-          "Sudah Bayar", // Ini yang akan muncul sebagai "Menunggu Panggilan"
-      "tanggal_resep": "2024-05-19",
-      "detail_resep": {
-        "id_resep": "ER003",
-        "poli": "Gigi",
-        "umur": "35 Tahun",
-        "beratBadan": "75 Kg",
-        "diagnosa": "Sakit Gigi",
-        "keterangan": "Jaga kebersihan gigi.",
-        "daftarObat": [
-          {
-            "nama_obat": "Mefenamic Acid",
-            "aturan_pakai": "2x sehari 1 tablet",
-            "kuantitas": 5,
-            "harga_satuan": 1500
-          },
-        ],
-        "catatan": "Minum setelah makan.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD004",
-      "nama_pasien": "Budi Santoso",
-      "nama_dokter": "dr. Ahmad Subardjo",
-      "status": "Selesai",
-      "tanggal_resep": "2024-05-18",
-      "detail_resep": {
-        "id_resep": "ER004",
-        "poli": "Umum",
-        "umur": "40 Tahun",
-        "beratBadan": "70 Kg",
-        "diagnosa": "Flu",
-        "keterangan": "Banyak minum air putih.",
-        "daftarObat": [
-          {
-            "nama_obat": "Bodrex",
-            "aturan_pakai": "3x sehari 1 tablet",
-            "kuantitas": 10,
-            "harga_satuan": 1000
-          },
-        ],
-        "catatan": "Istirahat yang cukup.",
-      },
-    },
-    {
-      "id_pendaftaran": "PD005",
-      "nama_pasien": "Mabel Pines", // Changed to match the image
-      "nama_dokter": "Dr. Atta", // Changed to match the image
-      "status": "Menunggu Pembayaran",
-      "tanggal_resep": "2025-05-05", // Changed to match the image
-      "detail_resep": {
-        "id_resep": "ER005", // Changed to match the image
-        "poli": "Poli KIA", // Changed to match the image
-        "umur": "34", // Changed to match the image
-        "beratBadan": "58.7", // Changed to match the image
-        "diagnosa": "Alergi Musim", // Changed to match the image
-        "keterangan":
-            "Gunakan sabun muka khusus.", // Not used in new modal design
-        "daftarObat": [
-          {
-            "nama_obat": "Amoxicillin", // Changed to match the image
-            "aturan_pakai":
-                "3x sehari setelah makan", // Changed to match the image
-            "kuantitas": 8, // Changed to match the image
-            "harga_satuan": 15000 // Changed to match the image
-          },
-        ],
-        "catatan": "Obat alergi musim", // Added this to match the image
-      },
-    },
-  ];
+  // --- Data from API ---
+  List<Map<String, dynamic>> _resepList =
+      []; // This will hold the combined data from API
+  bool _isLoadingData = false; // To show loading indicator for API data
+  String? _apiErrorMessage; // To display API errors
 
   // --- Filter and Sort State ---
   String _statusFilter = "Semua"; // Currently active filter
   String _searchText = ""; // Search text
   bool _showAll = false; // To show all items if there are more than 12
-  bool _isLoading = false; // Simulate data loading
 
-  // Diperbaiki: Mengubah urutan agar "Semua" menjadi yang pertama
   final List<String> _categoryOptions = [
     "Semua",
     "Antrian E-Resep",
@@ -189,17 +62,17 @@ class _EresepPageState extends State<EresepPage> {
     "Selesai": "Selesai",
   };
 
-  // Priority map for sorting (masih dipertahankan, tapi tidak digunakan jika dropdown urutkan dihapus)
+  // Priority map for sorting (still maintained for default sorting)
   final Map<String, int> _statusPriority = {
-    "Sudah Bayar": 1, // Highest priority
-    "Diproses": 2,
-    "Menunggu Pembayaran": 3,
+    "Diproses": 1, // Highest priority for "Antrian E-Resep"
+    "Menunggu Pembayaran": 2,
+    "Sudah Bayar": 3, // For "Menunggu Panggilan"
     "Selesai": 4, // Lowest priority
   };
 
   // --- UI State Variables untuk Header dan Menu ---
   int _selectedIndex =
-      1; // Default selected index untuk EresepPage adalah 1 (asumsi: 0-Dashboard, 1-Eresep)
+      1; // Default selected index untuk EresepPage adalah 1 (0-Dashboard, 1-Eresep)
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTopButton = false;
   final TextEditingController _headerSearchController =
@@ -209,16 +82,20 @@ class _EresepPageState extends State<EresepPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _filterAndSortResep();
+    _headerSearchController.addListener(() {
+      setState(() {
+        _searchText = _headerSearchController.text;
+      });
     });
+    _fetchEresepData(); // Initial data fetch from API
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_scrollListener);
+    _scrollController
+        .removeListener(_scrollListener); // FIXED: Pass the listener function
     _scrollController.dispose();
-    _headerSearchController.dispose(); // Dispose controller header
+    _headerSearchController.dispose(); // Dispose header controller
     super.dispose();
   }
 
@@ -237,14 +114,14 @@ class _EresepPageState extends State<EresepPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
+          title: Text(title, style: TextStyle(color: primaryColor)),
           content: Text(content),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Tutup'),
+              child: Text('Tutup', style: TextStyle(color: primaryColor)),
             ),
           ],
         );
@@ -252,16 +129,181 @@ class _EresepPageState extends State<EresepPage> {
     );
   }
 
-  /// Triggers a re-calculation of filtered and sorted data and refreshes the UI.
-  void _filterAndSortResep() {
+  /// Fetches and combines e-resep data from multiple APIs.
+  Future<void> _fetchEresepData() async {
     setState(() {
-      // The getter _filteredAndSortedData will be re-calculated automatically
+      _isLoadingData = true;
+      _apiErrorMessage = null;
     });
+
+    try {
+      final responses = await Future.wait([
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/eresep')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/pasien')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/dokter')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/dilayani')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/memunculkan')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/obat')),
+        http.get(Uri.parse('https://ti054b05.agussbn.my.id/api/detail_eresep')),
+      ]);
+
+      for (var res in responses) {
+        if (res.statusCode != 200) {
+          throw Exception(
+              'Failed to load data from API: ${res.request?.url.path} (Status: ${res.statusCode})');
+        }
+      }
+
+      final List<dynamic> eresepData = json.decode(responses[0].body);
+      final List<dynamic> pasienData = json.decode(responses[1].body);
+      final List<dynamic> dokterData = json.decode(responses[2].body);
+      final List<dynamic> dilayaniData = json.decode(responses[3].body);
+      final List<dynamic> memunculkanData = json.decode(responses[4].body);
+      final List<dynamic> obatData = json.decode(responses[5].body);
+      final List<dynamic> detailEresepData = json.decode(responses[6].body);
+
+      final Map<String, dynamic> pasienMap = {
+        for (var p in pasienData) p['id_pendaftaran']: p
+      };
+      final Map<String, dynamic> dokterMap = {
+        for (var d in dokterData) d['id_dokter'].toString(): d
+      };
+      final Map<String, dynamic> dilayaniMap = {
+        for (var d in dilayaniData) d['id_pendaftaran']: d
+      };
+      final Map<String, dynamic> detailEresepMap = {
+        for (var d in detailEresepData) d['id_eresep']: d
+      };
+      final Map<String, dynamic> obatMap = {
+        for (var o in obatData) o['kode_obat']: o
+      };
+
+      List<Map<String, dynamic>> combinedResepList = [];
+
+      for (var resep in eresepData) {
+        final String idResep = resep['id_eresep'];
+        final String idPendaftaran = resep['id_pendaftaran'];
+
+        final pasien = pasienMap[idPendaftaran];
+        final dilayani = dilayaniMap[idPendaftaran];
+        final dokter = dilayani != null
+            ? dokterMap[dilayani['id_dokter'].toString()]
+            : null;
+        final detailResep = detailEresepMap[idResep];
+
+        List<Map<String, dynamic>> daftarObat = [];
+        final filteredMemunculkan =
+            memunculkanData.where((m) => m['id_eresep'] == idResep).toList();
+
+        for (var m in filteredMemunculkan) {
+          final obat = obatMap[m['kode_obat']];
+          if (obat != null) {
+            daftarObat.add({
+              "nama_obat": obat['nama_obat'] ?? "-",
+              "aturan_pakai": m['aturan_pakai'] ?? "-",
+              "kuantitas": m['kuantitas'] ?? 0,
+              "harga_satuan": obat['harga_satuan'] ?? 0,
+            });
+          }
+        }
+
+        combinedResepList.add({
+          "id_pendaftaran": idPendaftaran,
+          "nama_pasien": pasien?['nama_pasien'] ?? "N/A",
+          "nama_dokter": dokter?['nama_dokter'] ?? "N/A",
+          "status": resep['status'] ?? "N/A",
+          "tanggal_resep": detailResep?['tanggal_eresep'] ?? "N/A",
+          "detail_resep": {
+            "id_resep": idResep,
+            "poli": dokter?['poli'] ?? "N/A",
+            "umur": pasien?['umur']?.toString() ?? "N/A",
+            "beratBadan": pasien?['berat_badan']?.toString() ?? "N/A",
+            "diagnosa": pasien?['diagnosa'] ?? "N/A",
+            "keterangan": detailResep?['catatan'] ??
+                "N/A", // Use 'catatan' from detail_eresep
+            "daftarObat": daftarObat,
+            "catatan": detailResep?['catatan'] ??
+                "N/A", // Redundant if 'keterangan' is the same
+          },
+        });
+      }
+
+      if (mounted) {
+        setState(() {
+          _resepList = combinedResepList;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _apiErrorMessage = e.toString().contains("Failed host lookup")
+              ? "Tidak ada koneksi internet atau server tidak dapat dijangkau."
+              : e.toString();
+          _resepList = []; // Clear list on error
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching E-Resep: $_apiErrorMessage')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    }
   }
 
-  /// Filters and sorts the prescription list based on current filters and sort order.
+  /// Updates the status of a prescription via API and refreshes the UI.
+  Future<void> _updateResepStatus(String idResep, String newStatus) async {
+    // <-- Parameter changed to idResep
+    // Show loading indicator
+    setState(() {
+      _isLoadingData = true;
+    });
+
+    try {
+      final response = await http.put(
+        Uri.parse(
+            'https://ti054b05.agussbn.my.id/api/eresep/$idResep'), // <-- Using idResep here
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"status": newStatus}),
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Status resep $idResep diubah menjadi ${_statusDisplayMap[newStatus]}')), // <-- Message updated
+          );
+          // Re-fetch all data to ensure UI is fully consistent with the new state
+          await _fetchEresepData();
+        }
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ??
+            'Gagal update status resep. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating status: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingData = false; // Hide loading
+        });
+      }
+    }
+  }
+
+  /// Filters and sorts the prescription list based on current filters and search.
   List<Map<String, dynamic>> get _filteredAndSortedData {
-    List<Map<String, dynamic>> data = List.from(_mockResepList);
+    List<Map<String, dynamic>> data =
+        List.from(_resepList); // Use _resepList from API
 
     // Filter by status
     if (_statusFilter != "Semua") {
@@ -269,7 +311,7 @@ class _EresepPageState extends State<EresepPage> {
       data = data.where((resep) => resep['status'] == targetStatus).toList();
     }
 
-    // Filter by search text (gunakan _headerSearchController.text juga)
+    // Filter by search text
     if (_searchText.isNotEmpty || _headerSearchController.text.isNotEmpty) {
       final lowerSearch =
           (_searchText.isNotEmpty ? _searchText : _headerSearchController.text)
@@ -284,38 +326,21 @@ class _EresepPageState extends State<EresepPage> {
       }).toList();
     }
 
-    // Sorting (Bagian ini tidak lagi relevan jika dropdown dihapus, tapi jika Anda ingin tetap
-    // ada sorting default atau berdasarkan status, bisa dipertahankan atau diubah)
+    // Sorting by status priority
     data.sort((a, b) {
       final aPriority = _statusPriority[a['status']] ?? 999;
       final bPriority = _statusPriority[b['status']] ?? 999;
-      if (aPriority != bPriority) return aPriority - bPriority;
+      if (aPriority != bPriority) return aPriority.compareTo(bPriority);
 
-      // Jika prioritas status sama, bisa ditambahkan sorting sekunder
-      // Contoh: sorting berdasarkan ID pendaftaran (baru ke lama atau sebaliknya)
-      // return (b['id_pendaftaran'] as String).compareTo(a['id_pendaftaran'] as String);
-      return 0; // Tanpa sorting sekunder eksplisit jika dropdown dihapus
+      // Secondary sort by date (newest first)
+      final aDate =
+          DateTime.tryParse(a['tanggal_resep'] ?? '') ?? DateTime(1900);
+      final bDate =
+          DateTime.tryParse(b['tanggal_resep'] ?? '') ?? DateTime(1900);
+      return bDate.compareTo(aDate);
     });
 
     return data;
-  }
-
-  /// Updates the status of a prescription and refreshes the UI.
-  void _updateResepStatus(String id, String newStatus) {
-    setState(() {
-      _mockResepList = _mockResepList.map((resep) {
-        if (resep['id_pendaftaran'] == id) {
-          return {...resep, 'status': newStatus};
-        }
-        return resep;
-      }).toList();
-      _filterAndSortResep(); // Re-call to refresh the view
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(
-              'Status resep $id diubah menjadi ${_statusDisplayMap[newStatus]}')),
-    );
   }
 
   /// Shows a detailed modal for a selected prescription.
@@ -329,7 +354,6 @@ class _EresepPageState extends State<EresepPage> {
       totalHarga += (obat['kuantitas'] ?? 0) * (obat['harga_satuan'] ?? 0);
     }
 
-    // Format total harga ke mata uang Rupiah
     final formatCurrency = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
@@ -363,7 +387,7 @@ class _EresepPageState extends State<EresepPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and Close Button (Optional, can be put in AppBar if using AlertDialog)
+                  // Title and Close Button
                   Align(
                     alignment: Alignment.topRight,
                     child: IconButton(
@@ -523,12 +547,11 @@ class _EresepPageState extends State<EresepPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Print Resep Button
+                  // Print Resep Button (Petugas version might have different actions here)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: Implement print functionality
                         _showSimpleModal("Fungsi Cetak",
                             "Fitur cetak resep akan segera hadir!");
                       },
@@ -555,96 +578,7 @@ class _EresepPageState extends State<EresepPage> {
     );
   }
 
-  /// Helper for building an individual detail item with a label and value.
-  Widget _buildDetailItem(String label, String? value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value ?? "-",
-          style: TextStyle(
-              fontSize: 15, fontWeight: FontWeight.w600, color: primaryColor),
-        ),
-      ],
-    );
-  }
-
-  /// Helper for building a section card with a title, content, and icon.
-  Widget _buildSectionCard({
-    required String title,
-    required String content,
-    required IconData icon,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: accentColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: primaryColor),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            content,
-            style: TextStyle(fontSize: 15, color: Colors.grey[800]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Helper for building table header cells.
-  static Widget _buildTableHeaderCell(String text) {
-    return TableCell(
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  /// Helper for building table content cells.
-  static Widget _buildTableCell(String text) {
-    return TableCell(
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: Colors.black87),
-        ),
-      ),
-    );
-  }
-
-  // --- Widget Builders ---
+  // --- Widget Builders for Main Page Content ---
 
   @override
   Widget build(BuildContext context) {
@@ -660,8 +594,6 @@ class _EresepPageState extends State<EresepPage> {
         antreanCounter++;
         antreanMap[item['id_pendaftaran']] = antreanCounter;
       }
-      // Reset counter if there's a different status, or if you only want to count 'Diproses' consecutively
-      // For this implementation, it counts 'Diproses' globally in the filtered list.
     }
 
     return Scaffold(
@@ -669,145 +601,163 @@ class _EresepPageState extends State<EresepPage> {
       appBar: CustomHeader(
         primaryColor: primaryColor,
         onNotificationPressed: () {
-          // --- Mengubah navigasi menjadi pop-up ---
           _showSimpleModal(
               'Notifikasi', 'Anda memiliki beberapa notifikasi baru.');
         },
-        searchController:
-            _headerSearchController, // Menggunakan controller baru untuk header
+        searchController: _headerSearchController,
         onSearchChanged: (text) {
-          // Mengupdate filter pencarian utama ketika teks di header berubah
           setState(() {
             _searchText = text;
-            _filterAndSortResep();
           });
         },
-        searchHintText:
-            'Cari E-Resep di sini...', // Hint text khusus untuk EresepPage
+        searchHintText: 'Cari E-Resep di sini...',
       ),
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'E-Resep',
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Menampilkan daftar E-Resep pasien.',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
+      body: _isLoadingData
+          ? Center(
+              child: CircularProgressIndicator(
+              color: primaryColor,
+            ))
+          : RefreshIndicator(
+              onRefresh: _fetchEresepData,
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverList(
+                    delegate: SliverChildListDelegate(
+                      [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'E-Resep',
+                                style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Menampilkan daftar E-Resep pasien.',
+                                style:
+                                    TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 16),
 
-                      // Categories / Status Filter Buttons
-                      _buildCategoriesSection(),
-                      const SizedBox(height: 16),
+                              // Categories / Status Filter Buttons
+                              _buildCategoriesSection(),
+                              const SizedBox(height: 16),
 
-                      // List Resep Cards
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : displayedData.isEmpty
-                              ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(24.0),
-                                    child: Text(
-                                      'Tidak ada E-Resep ditemukan.',
-                                      style: TextStyle(
-                                          fontSize: 16, color: Colors.grey),
+                              // List Resep Cards
+                              displayedData.isEmpty && !_isLoadingData
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24.0),
+                                        child: Text(
+                                          _apiErrorMessage != null
+                                              ? 'Error: $_apiErrorMessage'
+                                              : 'Tidak ada E-Resep ditemukan.',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              fontSize: 16, color: Colors.grey),
+                                        ),
+                                      ),
+                                    )
+                                  : Column(
+                                      children: displayedData.map((resep) {
+                                        final int? currentAntreanNo =
+                                            resep['status'] == 'Diproses'
+                                                ? antreanMap[
+                                                    resep['id_pendaftaran']]
+                                                : null;
+                                        return _buildResepCard(
+                                            resep, currentAntreanNo);
+                                      }).toList(),
+                                    ),
+
+                              // "Lihat Semua" button if more data
+                              if (_filteredAndSortedData.length > 12 &&
+                                  !_showAll)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0),
+                                  child: Center(
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _showAll = !_showAll;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 24, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: Text(_showAll
+                                          ? "Sembunyikan"
+                                          : "Lihat Semua"),
                                     ),
                                   ),
-                                )
-                              : Column(
-                                  children: displayedData.map((resep) {
-                                    return _buildResepCard(resep,
-                                        antreanMap[resep['id_pendaftaran']]);
-                                  }).toList(),
+                                ),
+                              // "Sembunyikan" button if showing all
+                              if (_filteredAndSortedData.length > 12 &&
+                                  _showAll)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0),
+                                  child: Center(
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _showAll = !_showAll;
+                                          _scrollController.animateTo(0,
+                                              duration: const Duration(
+                                                  milliseconds: 500),
+                                              curve: Curves.easeInOut);
+                                        });
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: primaryColor,
+                                        side: BorderSide(color: primaryColor),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 24, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: const Text("Sembunyikan"),
+                                    ),
+                                  ),
                                 ),
 
-                      // "Lihat Semua" button if more data
-                      if (_filteredAndSortedData.length > 12 && !_showAll)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showAll = !_showAll;
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Text(
-                                  _showAll ? "Sembunyikan" : "Lihat Semua"),
-                            ),
+                              const SizedBox(height: 24),
+
+                              // Information & Tip Section
+                              _buildInfoTipSection(),
+
+                              const SizedBox(height: 24),
+
+                              // View E-Prescription Guide
+                              _buildPetunjukSection(),
+
+                              const SizedBox(
+                                  height: 50), // Spacing at the bottom
+                            ],
                           ),
                         ),
-                      // "Sembunyikan" button if showing all
-                      if (_filteredAndSortedData.length > 12 && _showAll)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showAll = !_showAll;
-                                  _scrollController.animateTo(0,
-                                      duration:
-                                          const Duration(milliseconds: 500),
-                                      curve: Curves.easeInOut);
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: primaryColor,
-                                side: BorderSide(color: primaryColor),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text("Sembunyikan"),
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 24),
-
-                      // Information & Tip Section
-                      _buildInfoTipSection(),
-
-                      const SizedBox(height: 24),
-
-                      // View E-Prescription Guide
-                      _buildPetunjukSection(),
-
-                      const SizedBox(height: 50), // Spacing at the bottom
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -821,7 +771,6 @@ class _EresepPageState extends State<EresepPage> {
               MaterialPageRoute(builder: (context) => const DashboardPetugas()),
             );
           } else if (index == 1) {
-            // Sudah di halaman Eresep, jadi tidak perlu navigasi ulang
             print("Sudah di halaman E-Resep.");
           } else if (index == 2) {
             Navigator.pushReplacement(
@@ -834,7 +783,6 @@ class _EresepPageState extends State<EresepPage> {
               MaterialPageRoute(builder: (context) => const AkunPage()),
             );
           } else if (index == 4) {
-            // Asumsi ada 5 item di menu
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -862,13 +810,74 @@ class _EresepPageState extends State<EresepPage> {
     );
   }
 
+  // --- Helper Methods (PASTIKAN SEMUA METHOD INI ADA DI DALAM KELAS _EresepPageState) ---
+
+  /// Helper for building an individual detail item with a label and value.
+  Widget _buildDetailItem(String label, String? value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value ?? "-",
+          style: TextStyle(
+              fontSize: 15, fontWeight: FontWeight.w600, color: primaryColor),
+        ),
+      ],
+    );
+  }
+
+  /// Builds a section container with a title and child widgets arranged in a grid.
+  Widget _buildSectionContainer({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: accentColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          const Divider(height: 20, thickness: 1),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            childAspectRatio: 3.5, // Adjust as needed
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            children: children,
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Builds the categories/status filter section.
   Widget _buildCategoriesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Kategori', // Tetap "Kategori" sesuai kode Anda sebelumnya
+          'Kategori',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -878,10 +887,8 @@ class _EresepPageState extends State<EresepPage> {
         SizedBox(
           height: 65, // Tinggi yang cukup untuk ikon
           child: SingleChildScrollView(
-            // Menggunakan SingleChildScrollView
             scrollDirection: Axis.horizontal,
             child: Row(
-              // Menggunakan Row untuk menampung item secara berurutan dari kiri ke kanan
               children: _categoryOptions.map((status) {
                 final bool isSelected = _statusFilter == status;
 
@@ -916,13 +923,11 @@ class _EresepPageState extends State<EresepPage> {
                 }
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0), // Padding horizontal
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: GestureDetector(
                     onTap: () {
                       setState(() {
                         _statusFilter = status;
-                        _filterAndSortResep(); // Re-call when filter changes
                       });
                     },
                     child: Column(
@@ -967,21 +972,13 @@ class _EresepPageState extends State<EresepPage> {
     );
   }
 
-  /// Builds the search input field.
-  Widget _buildSearchInput() {
-    // Search input ini dihapus karena sudah ada search bar di CustomHeader.
-    // Jika Anda ingin dua search bar, Anda bisa tambahkan kembali widget ini.
-    return const SizedBox.shrink(); // Mengembalikan widget kosong
-  }
-
-  /// Builds a single prescription card.
+  /// Builds a single prescription card for petugas.
   Widget _buildResepCard(Map<String, dynamic> resep, int? antreanNo) {
     String displayStatus =
         _statusDisplayMap[resep['status']] ?? resep['status'];
     Color statusColor;
     IconData statusIcon;
 
-    // Determine status color and icon
     if (resep['status'] == "Menunggu Pembayaran") {
       statusColor = Colors.orange;
       statusIcon = Icons.payment;
@@ -999,18 +996,13 @@ class _EresepPageState extends State<EresepPage> {
       statusIcon = Icons.info_outline;
     }
 
-    // Action for "Detail" button
-    void onDetailTap() {
-      _showResepDetailModal(resep);
-    }
-
     Widget actionButtons;
 
     if (resep['status'] == "Menunggu Pembayaran") {
       actionButtons = SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: onDetailTap,
+          onPressed: () => _showResepDetailModal(resep),
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
@@ -1028,7 +1020,8 @@ class _EresepPageState extends State<EresepPage> {
           Expanded(
             child: ElevatedButton(
               onPressed: () {
-                _updateResepStatus(resep['id_pendaftaran'], "Diproses");
+                _updateResepStatus(resep['detail_resep']['id_resep'],
+                    "Diproses"); // <-- Menggunakan id_eresep
                 _showSimpleModal("Panggilan Pasien",
                     "Pasien ${resep['nama_pasien']} dengan ID ${resep['id_pendaftaran']} akan dipanggil. Status diubah menjadi Antrian E-Resep.");
               },
@@ -1046,7 +1039,7 @@ class _EresepPageState extends State<EresepPage> {
           const SizedBox(width: 10),
           Expanded(
             child: OutlinedButton(
-              onPressed: onDetailTap,
+              onPressed: () => _showResepDetailModal(resep),
               style: OutlinedButton.styleFrom(
                 foregroundColor: primaryColor,
                 side: BorderSide(color: primaryColor),
@@ -1065,7 +1058,8 @@ class _EresepPageState extends State<EresepPage> {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            _updateResepStatus(resep['id_pendaftaran'], "Selesai");
+            _updateResepStatus(resep['detail_resep']['id_resep'],
+                "Selesai"); // <-- Menggunakan id_eresep
             _showSimpleModal("Resep Selesai",
                 "E-Resep ${resep['id_pendaftaran']} telah Selesai.");
           },
@@ -1084,7 +1078,7 @@ class _EresepPageState extends State<EresepPage> {
       actionButtons = SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: onDetailTap,
+          onPressed: () => _showResepDetailModal(resep),
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
@@ -1097,12 +1091,10 @@ class _EresepPageState extends State<EresepPage> {
         ),
       );
     } else {
-      statusColor = Colors.grey;
-      statusIcon = Icons.info_outline;
       actionButtons = SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: onDetailTap,
+          onPressed: () => _showResepDetailModal(resep),
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
@@ -1312,6 +1304,75 @@ class _EresepPageState extends State<EresepPage> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             side: BorderSide(color: primaryColor), // Border with primaryColor
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Helper for building a section card with a title, content, and icon.
+  Widget _buildSectionCard({
+    required String title,
+    required String content,
+    required IconData icon,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: accentColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: primaryColor),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: TextStyle(fontSize: 15, color: Colors.grey[800]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper for building table header cells.
+  static Widget _buildTableHeaderCell(String text) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  /// Helper for building table content cells.
+  static Widget _buildTableCell(String text) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, color: Colors.black87),
         ),
       ),
     );
