@@ -163,21 +163,22 @@ class _EresepPageState extends State<EresepPage> {
   bool _showAll = false; // To show all items if there are more than 12
   bool _isLoading = false; // Simulate data loading
 
+  // Diperbaiki: Mengubah urutan agar "Semua" menjadi yang pertama
   final List<String> _categoryOptions = [
+    "Semua",
     "Antrian E-Resep",
     "Menunggu Pembayaran",
     "Menunggu Panggilan",
     "Selesai",
-    "Semua",
   ];
 
   // Map for converting from button status (display name) to internal data status
   final Map<String, String> _statusFilterMap = {
+    "Semua": "Semua", // "Semua" status doesn't need conversion, used directly
     "Antrian E-Resep": "Diproses",
     "Menunggu Pembayaran": "Menunggu Pembayaran",
     "Menunggu Panggilan": "Sudah Bayar",
     "Selesai": "Selesai",
-    "Semua": "Semua", // "Semua" status doesn't need conversion, used directly
   };
 
   // Map for converting from internal data status to UI display
@@ -875,100 +876,91 @@ class _EresepPageState extends State<EresepPage> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 65, // Tinggi sedikit dikurangi karena tidak ada label teks
-          child: ListView.builder(
+          height: 65, // Tinggi yang cukup untuk ikon
+          child: SingleChildScrollView(
+            // Menggunakan SingleChildScrollView
             scrollDirection: Axis.horizontal,
-            itemCount: _categoryOptions.length,
-            itemBuilder: (context, index) {
-              final status = _categoryOptions[index];
-              final bool isSelected = _statusFilter == status;
+            child: Row(
+              // Menggunakan Row untuk menampung item secara berurutan dari kiri ke kanan
+              children: _categoryOptions.map((status) {
+                final bool isSelected = _statusFilter == status;
 
-              IconData iconData;
-              Color iconColor;
+                IconData iconData;
+                Color iconColor;
 
-              switch (status) {
-                case "Antrian E-Resep":
-                  iconData = Icons.receipt_long;
-                  iconColor = primaryColor;
-                  break;
-                case "Menunggu Pembayaran":
-                  iconData = Icons.payment;
-                  iconColor = Colors.orange;
-                  break;
-                case "Menunggu Panggilan":
-                  iconData = Icons.call;
-                  iconColor = Colors.blue;
-                  break;
-                case "Selesai":
-                  iconData = Icons.check_circle;
-                  iconColor = Colors.green;
-                  break;
-                case "Semua":
-                  iconData = Icons.list;
-                  iconColor = Colors.grey;
-                  break;
-                default:
-                  iconData = Icons.grid_view;
-                  iconColor = Colors.grey;
-                  break;
-              }
+                switch (status) {
+                  case "Antrian E-Resep":
+                    iconData = Icons.receipt_long;
+                    iconColor = primaryColor;
+                    break;
+                  case "Menunggu Pembayaran":
+                    iconData = Icons.payment;
+                    iconColor = Colors.orange;
+                    break;
+                  case "Menunggu Panggilan":
+                    iconData = Icons.call;
+                    iconColor = Colors.blue;
+                    break;
+                  case "Selesai":
+                    iconData = Icons.check_circle;
+                    iconColor = Colors.green;
+                    break;
+                  case "Semua":
+                    iconData = Icons.list;
+                    iconColor = Colors.grey;
+                    break;
+                  default:
+                    iconData = Icons.grid_view;
+                    iconColor = Colors.grey;
+                    break;
+                }
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10.0), // Padding horizontal sedikit lebih besar
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _statusFilter = status;
-                      _filterAndSortResep(); // Re-call when filter changes
-                    });
-                  },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.center, // Pusatkan secara horizontal
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? primaryColor : Colors.white,
-                          border: Border.all(
-                            color: isSelected
-                                ? Colors.transparent
-                                : Colors.grey[300]!,
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 1,
-                              blurRadius: 3,
-                              offset: const Offset(0, 1),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0), // Padding horizontal
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _statusFilter = status;
+                        _filterAndSortResep(); // Re-call when filter changes
+                      });
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected ? primaryColor : Colors.white,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.transparent
+                                  : Colors.grey[300]!,
+                              width: 1,
                             ),
-                          ],
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            iconData,
+                            color: isSelected ? Colors.white : iconColor,
+                            size: 30,
+                          ),
                         ),
-                        child: Icon(
-                          iconData,
-                          color: isSelected ? Colors.white : iconColor,
-                          size: 30,
-                        ),
-                      ),
-                      // SizedBox(height: 4), // Dihapus karena tidak ada teks label
-                      // Text(
-                      //   status,
-                      //   textAlign: TextAlign.center, // Dihapus karena tidak ada teks label
-                      //   style: TextStyle(
-                      //     fontSize: 12,
-                      //     color: isSelected ? primaryColor : Colors.black87,
-                      //     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      //   ),
-                      // ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],

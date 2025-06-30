@@ -11,7 +11,9 @@ class NewPasswordScreen extends StatefulWidget {
   State<NewPasswordScreen> createState() => _NewPasswordScreenState();
 }
 
-class _NewPasswordScreenState extends State<NewPasswordScreen> {
+class _NewPasswordScreenState extends State<NewPasswordScreen>
+    with SingleTickerProviderStateMixin {
+  // Tambahkan SingleTickerProviderStateMixin
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -27,6 +29,10 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
   String _errorMessage = ''; // Error global
   bool _showSuccessModal = false; // State untuk menampilkan modal sukses
 
+  // Animasi untuk modal sukses
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
   // Mendefinisikan warna heksadesimal sesuai dengan desain web
   final Color primaryColor = const Color(0xFF2A4D69); // Warna utama
   final Color darkTextColor = const Color(0xFF1D242E); // Warna teks gelap
@@ -34,9 +40,23 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
   final Color hintAndLabelColor = Colors.black54; // Ini sudah ditambahkan
 
   @override
+  void initState() {
+    super.initState();
+    // Inisialisasi AnimationController
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300), // Durasi animasi fade-in
+    );
+    // Inisialisasi Animation (Tween untuk fade dari 0.0 ke 1.0)
+    _fadeAnimation =
+        Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+  }
+
+  @override
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _animationController.dispose(); // Pastikan controller di-dispose
     super.dispose();
   }
 
@@ -95,6 +115,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
       setState(() {
         _showSuccessModal = true;
       });
+      _animationController.forward(from: 0.0); // Memulai animasi fade-in
 
       // Bersihkan field password setelah sukses
       _passwordController.clear();
@@ -109,31 +130,36 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
 
   // Fungsi untuk tombol "Lanjutkan" pada modal sukses
   void _handleSuccessModalContinue() {
-    setState(() {
-      _showSuccessModal = false;
+    _animationController.reverse().then((_) {
+      // Animasi fade-out sebelum navigasi
+      setState(() {
+        _showSuccessModal = false;
+      });
+      // Navigasi ke halaman login dan hapus semua rute sebelumnya
+      // Hapus data reset_email dan reset_code jika disimpan di SharedPreferences/localStorage sebelumnya
+      // SharedPreferences.getInstance().then((prefs) => prefs.remove('reset_email'));
+      // SharedPreferences.getInstance().then((prefs) => prefs.remove('reset_code'));
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
+        (Route<dynamic> route) => false,
+      );
     });
-    // Navigasi ke halaman login dan hapus semua rute sebelumnya
-    // Hapus data reset_email dan reset_code jika disimpan di SharedPreferences/localStorage sebelumnya
-    // SharedPreferences.getInstance().then((prefs) => prefs.remove('reset_email'));
-    // SharedPreferences.getInstance().then((prefs) => prefs.remove('reset_code'));
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const SignInScreen()),
-      (Route<dynamic> route) => false,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     // Tombol "Ubah Password" akan dinonaktifkan jika ada field yang kosong
     // atau jika validasi awal belum memenuhi (misal, panjang password min)
-    final bool isSubmitDisabled = _passwordController.text.isEmpty ||
-        _confirmPasswordController.text.isEmpty ||
-        _validatePassword(_passwordController.text) !=
-            null || // Tambahkan validasi password ke disabled state
-        _passwordController.text !=
-            _confirmPasswordController
-                .text; // Juga jika confirm password tidak cocok
+    // Catatan: isSubmitDisabled ini tidak lagi digunakan karena onPressed diatur langsung ke _handleSubmit
+    // Ini adalah komentar yang berguna jika Anda ingin mengaktifkan kembali validasi disabled button
+    // final bool isSubmitDisabled = _passwordController.text.isEmpty ||
+    //     _confirmPasswordController.text.isEmpty ||
+    //     _validatePassword(_passwordController.text) !=
+    //         null || // Tambahkan validasi password ke disabled state
+    //     _passwordController.text !=
+    //         _confirmPasswordController
+    //             .text; // Juga jika confirm password tidak cocok
 
     return CustomScaffold(
       // Menggunakan CustomScaffold untuk latar belakang
@@ -299,6 +325,16 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
                                 // Menggunakan validator untuk validasi form yang terintegrasi
                                 validator: _validatePassword,
                               ),
+                              // Menampilkan pesan error khusus di bawah field
+                              if (_passwordError.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    _passwordError,
+                                    style: TextStyle(
+                                        color: Colors.red[700], fontSize: 12.0),
+                                  ),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 25.0),
@@ -340,7 +376,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
                                         color: primaryColor), // Warna disamakan
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  // --- PERUBAHAN DI SINI: Sembunyikan errorText ---
+                                  // --- PERUBAHAN DI SINI: Sembunyikan errorText (tetap) ---
                                   errorStyle:
                                       const TextStyle(height: 0, fontSize: 0),
                                   // --- AKHIR PERUBAHAN ---
@@ -373,12 +409,27 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
                                   if (value == null || value.isEmpty) {
                                     return "Konfirmasi password tidak boleh kosong.";
                                   }
-                                  if (value != _passwordController.text) {
+                                  // Validasi kecocokan hanya jika password pertama tidak kosong dan valid secara format
+                                  if (_passwordController.text.isNotEmpty &&
+                                      _validatePassword(
+                                              _passwordController.text) ==
+                                          null &&
+                                      value != _passwordController.text) {
                                     return "Konfirmasi password tidak cocok.";
                                   }
                                   return null;
                                 },
                               ),
+                              // Menampilkan pesan error khusus di bawah field
+                              if (_confirmPasswordError.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    _confirmPasswordError,
+                                    style: TextStyle(
+                                        color: Colors.red[700], fontSize: 12.0),
+                                  ),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 30.0),
@@ -420,68 +471,73 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
             ],
           ),
 
-          // --- Modal Berhasil (mengikuti desain ReactJS) ---
+          // --- Modal Berhasil (mengikuti desain ReactJS) dengan FadeTransition ---
           if (_showSuccessModal)
-            Container(
-              color: Colors.black.withOpacity(0.5), // Background gelap
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              alignment: Alignment.center,
-              child: AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20.0), // Sudut melengkung
-                ),
-                contentPadding: const EdgeInsets.all(24.0),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'BERHASIL',
-                      style: TextStyle(
-                        fontSize: 28.0,
-                        fontWeight: FontWeight.bold,
+            // Menggunakan FadeTransition untuk animasi opasitas
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: Container(
+                color: Colors.black.withOpacity(0.5), // Background gelap
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                alignment: Alignment.center,
+                child: AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(20.0), // Sudut melengkung
+                  ),
+                  contentPadding: const EdgeInsets.all(24.0),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'BERHASIL',
+                        style: TextStyle(
+                          fontSize: 28.0,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      // Menggunakan ikon check_circle_outline sebagai pengganti SuccessIcon
+                      Icon(
+                        Icons.check_circle_outline,
                         color: primaryColor,
+                        size: 100, // Sesuaikan ukuran ikon
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    // Menggunakan ikon check_circle_outline sebagai pengganti SuccessIcon
-                    Icon(
-                      Icons.check_circle_outline,
-                      color: primaryColor,
-                      size: 100, // Sesuaikan ukuran ikon
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Selamat! Password Anda berhasil dibuat. Klik "Lanjutkan" untuk login.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16.0,
-                        color: Colors.black,
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Selamat! Password Anda berhasil dibuat. Klik "Lanjutkan" untuk login.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16.0,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _handleSuccessModalContinue,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              primaryColor, // Warna tombol lanjutkan
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _handleSuccessModalContinue,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                primaryColor, // Warna tombol lanjutkan
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                        ),
-                        child: const Text(
-                          'Lanjutkan',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                          child: const Text(
+                            'Lanjutkan',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

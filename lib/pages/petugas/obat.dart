@@ -592,14 +592,14 @@ class _ObatPageState extends State<ObatPage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor:
-                  primaryColor, // Tombol banner sekarang primaryColor
+                  secondaryColor, // Tombol banner sekarang primaryColor
               foregroundColor: Colors.white, // Teks tombol putih
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            child: const Text('Lihat'),
+            child: const Text('Pelajari lebih lanjut'),
           ),
         ],
       ),
